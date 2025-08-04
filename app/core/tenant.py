@@ -177,41 +177,51 @@ class TenantMiddleware:
         if scope["type"] == "http":
             request = Request(scope, receive)
             
-            # Extract organization context from various sources
+            # Allow OPTIONS requests to pass through without tenant processing
+            # This is crucial for CORS preflight requests
+            if request.method == "OPTIONS":
+                await self.app(scope, receive, send)
+                return
+            
+            # Extract organization context from various sources for non-OPTIONS requests
             org_id = self._extract_organization_id(request)
             
             if org_id:
                 TenantContext.set_organization_id(org_id)
                 logger.debug(f"Middleware set organization context: {org_id}")
         
+        # Process request
         await self.app(scope, receive, send)
+        
+        # Clear context after request
+        TenantContext.clear()
     
     def _extract_organization_id(self, request: Request) -> Optional[int]:
         """Extract organization ID from request headers, subdomain, or path"""
-        # Try X-Organization-ID header
-        org_header = request.headers.get("X-Organization-ID")
-        if org_header:
-            try:
+        try:
+            # Method 1: From custom header
+            org_header = request.headers.get("X-Organization-ID")
+            if org_header and org_header.isdigit():
                 return int(org_header)
-            except ValueError:
-                logger.warning(f"Invalid organization ID in header: {org_header}")
-        
-        # Try subdomain-based extraction (e.g., tenant1.api.example.com)
-        host = request.headers.get("host", "")
-        if "." in host:
-            subdomain = host.split(".")[0]
-            # Look up organization by subdomain (would need database access)
-            # This is a placeholder - implement based on your subdomain strategy
-            pass
-        
-        # Try path-based extraction (e.g., /org/123/api/...)
-        path = request.url.path
-        if path.startswith("/org/"):
-            try:
-                org_id = int(path.split("/")[2])
-                return org_id
-            except (IndexError, ValueError):
-                pass
+            
+            # Method 2: From subdomain-based extraction (e.g., tenant1.api.example.com)
+            host = request.headers.get("host", "")
+            if "." in host:
+                subdomain = host.split(".")[0]
+                if subdomain and subdomain not in ["www", "api", "admin"]:
+                    # Look up organization by subdomain
+                    # Note: This would require database access in middleware
+                    # For now, we'll handle this in the authentication dependency
+                    pass
+            
+            # Method 3: From path parameter (e.g., /api/v1/org/{org_id}/...)
+            path_parts = request.url.path.split("/")
+            if len(path_parts) >= 5 and path_parts[3] == "org":
+                if path_parts[4].isdigit():
+                    return int(path_parts[4])
+                    
+        except Exception as e:
+            logger.warning(f"Error extracting organization ID: {e}")
         
         return None
 
@@ -241,53 +251,6 @@ def get_tenant_scoped_db(
     org_id = require_organization_context()
     query = db.query(model)
     return TenantQueryFilter.apply_organization_filter(query, model, org_id)
-    
-    def __init__(self, app):
-        self.app = app
-    
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http":
-            request = Request(scope, receive)
-            
-            # Extract tenant context from subdomain or header
-            org_id = await self._extract_organization_id(request)
-            if org_id:
-                TenantContext.set_organization_id(org_id)
-        
-        # Process request
-        await self.app(scope, receive, send)
-        
-        # Clear context after request
-        TenantContext.clear()
-    
-    async def _extract_organization_id(self, request: Request) -> Optional[int]:
-        """Extract organization ID from request"""
-        try:
-            # Method 1: From subdomain
-            host = request.headers.get("host", "")
-            if "." in host:
-                subdomain = host.split(".")[0]
-                if subdomain and subdomain != "www":
-                    # Look up organization by subdomain
-                    # Note: This would require database access in middleware
-                    # For now, we'll handle this in the authentication dependency
-                    pass
-            
-            # Method 2: From custom header
-            org_id = request.headers.get("X-Organization-ID")
-            if org_id and org_id.isdigit():
-                return int(org_id)
-            
-            # Method 3: From path parameter (e.g., /api/v1/org/{org_id}/...)
-            path_parts = request.url.path.split("/")
-            if len(path_parts) >= 5 and path_parts[3] == "org":
-                if path_parts[4].isdigit():
-                    return int(path_parts[4])
-            
-        except Exception as e:
-            logger.warning(f"Error extracting organization ID: {e}")
-        
-        return None
 
 def get_organization_from_subdomain(subdomain: str, db: Session) -> Optional[Organization]:
     """Get organization by subdomain"""
