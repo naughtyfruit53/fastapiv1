@@ -86,6 +86,17 @@ export const authService = {
       throw new Error(error.userMessage || 'Login failed');
     }
   },
+  /**
+   * Login with email and password using JSON authentication
+   * 
+   * ENDPOINT: POST /api/auth/login/email
+   * CONTENT-TYPE: application/json
+   * CORS: Configured for http://localhost:3000
+   * 
+   * @param email - User's email address
+   * @param password - User's password
+   * @returns Promise with authentication token and user details
+   */
   loginWithEmail: async (email: string, password: string) => {
     try {
       const response = await api.post('/auth/login/email', { email, password });
