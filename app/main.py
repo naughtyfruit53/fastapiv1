@@ -25,13 +25,16 @@ app = FastAPI(
     openapi_url=f"{config_settings.API_V1_STR}/openapi.json"
 )
 
+# Add tenant middleware for multi-tenancy
+app.add_middleware(TenantMiddleware)
+
 # Set up CORS for frontend integration
-# IMPORTANT: This middleware must be added BEFORE other route-specific middleware
+# IMPORTANT: This middleware must be added AFTER other route-specific middleware
 # to ensure proper handling of preflight OPTIONS requests
 logger.info(f"Configuring CORS with allowed origins: {config_settings.BACKEND_CORS_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config_settings.BACKEND_CORS_ORIGINS,  # Frontend URLs (http://localhost:3000)
+    allow_origins=config_settings.BACKEND_CORS_ORIGINS,  # Frontend URLs[](http://localhost:3000)
     allow_credentials=True,                               # Required for authentication cookies/headers
     allow_methods=["*"],                                  # Allow all HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
     allow_headers=["*"],                                  # Allow all headers (Content-Type, Authorization, etc.)
@@ -48,9 +51,6 @@ async def log_cors_config():
     logger.info(f"  Allow Methods: ['*'] (all)")
     logger.info(f"  Allow Headers: ['*'] (all)")
     logger.info("=" * 50)
-
-# Add tenant middleware for multi-tenancy
-app.add_middleware(TenantMiddleware)
 
 # ------------------------------------------------------------------------------
 # ENHANCED V1 API ROUTERS
