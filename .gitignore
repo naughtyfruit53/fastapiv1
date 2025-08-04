@@ -1,4 +1,57 @@
-# Temporary files for testing and development
-demo_mandatory_password_change.py
-validate_implementation.py
-test_mandatory_password.db
+#Python-specific
+pycache/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+#Environment files
+.env
+*.env
+
+#IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+#OS-specific files
+.DS_Store
+Thumbs.db
+
+#Virtual environments
+venv/
+env/
+*.venv/
+
+#PySide6-specific
+*.ui.bak
+.py.bak
+ui_.py  # Auto-generated UI files from pyside6-uic
+
+#Database files
+*.db
+*.sqlite
+*.sqlite3
+!test_*.db  # Keep test databases if needed
+
+#Miscellaneous
+*.log
+*.bak
+*.swp
+
+#Node.js dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
