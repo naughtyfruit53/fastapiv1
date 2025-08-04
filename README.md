@@ -397,6 +397,50 @@ GET /api/v1/health/pool
 
 ### Common Issues
 
+#### CORS and Network Errors
+
+**Problem**: Frontend cannot connect to backend API, receiving network errors or 400 Bad Request on OPTIONS preflight requests.
+
+**Solution**:
+1. **Verify CORS configuration** in `app/main.py`:
+   ```python
+   # Ensure CORS middleware includes your frontend URL
+   BACKEND_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:8080"]
+   ```
+
+2. **Check frontend API calls** use correct Content-Type:
+   ```javascript
+   // Correct: Use application/json for /api/auth/login/email
+   fetch('http://localhost:8000/api/auth/login/email', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ email: 'user@example.com', password: 'password123' })
+   })
+   ```
+
+3. **Verify backend URL** in frontend configuration:
+   ```javascript
+   // In frontend/.env.local or code:
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
+
+4. **Test CORS manually**:
+   ```bash
+   # Test OPTIONS preflight request
+   curl -X OPTIONS -H "Origin: http://localhost:3000" \
+        -H "Access-Control-Request-Method: POST" \
+        -H "Access-Control-Request-Headers: Content-Type" \
+        http://localhost:8000/api/auth/login/email
+   
+   # Should return 200 OK with CORS headers
+   ```
+
+5. **Common fixes**:
+   - Ensure backend starts before frontend
+   - Check firewall/antivirus blocking connections
+   - Verify no proxy/VPN interfering with localhost
+   - Clear browser cache and restart both servers
+
 #### Database Connection
 ```bash
 # Check database connectivity

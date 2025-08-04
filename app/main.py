@@ -25,14 +25,29 @@ app = FastAPI(
     openapi_url=f"{config_settings.API_V1_STR}/openapi.json"
 )
 
-# Set up CORS
+# Set up CORS for frontend integration
+# IMPORTANT: This middleware must be added BEFORE other route-specific middleware
+# to ensure proper handling of preflight OPTIONS requests
+logger.info(f"Configuring CORS with allowed origins: {config_settings.BACKEND_CORS_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config_settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=config_settings.BACKEND_CORS_ORIGINS,  # Frontend URLs (http://localhost:3000)
+    allow_credentials=True,                               # Required for authentication cookies/headers
+    allow_methods=["*"],                                  # Allow all HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
+    allow_headers=["*"],                                  # Allow all headers (Content-Type, Authorization, etc.)
 )
+
+# Debug CORS configuration on startup
+@app.on_event("startup")
+async def log_cors_config():
+    """Log CORS configuration for debugging"""
+    logger.info("=" * 50)
+    logger.info("CORS Configuration:")
+    logger.info(f"  Allowed Origins: {config_settings.BACKEND_CORS_ORIGINS}")
+    logger.info(f"  Allow Credentials: True")
+    logger.info(f"  Allow Methods: ['*'] (all)")
+    logger.info(f"  Allow Headers: ['*'] (all)")
+    logger.info("=" * 50)
 
 # Add tenant middleware for multi-tenancy
 app.add_middleware(TenantMiddleware)
@@ -40,6 +55,16 @@ app.add_middleware(TenantMiddleware)
 # ------------------------------------------------------------------------------
 # ENHANCED V1 API ROUTERS
 # ------------------------------------------------------------------------------
+# Authentication endpoints are available at:
+# - POST /api/auth/login (form-data authentication)
+# - POST /api/auth/login/email (JSON authentication with email/password)
+# 
+# FRONTEND USAGE EXAMPLE:
+# fetch('http://localhost:8000/api/auth/login/email', {
+#   method: 'POST',
+#   headers: { 'Content-Type': 'application/json' },
+#   body: JSON.stringify({ email: 'user@example.com', password: 'password123' })
+# })
 app.include_router(
     v1_auth.router, 
     prefix=f"{config_settings.API_V1_STR}/auth", 
@@ -75,7 +100,17 @@ app.include_router(pincode.router, prefix=f"{config_settings.API_V1_STR}/pincode
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and create tables on startup"""
+    """Initialize application: log CORS config, setup database, and seed super admin"""
+    # Log CORS configuration for debugging
+    logger.info("=" * 50)
+    logger.info("CORS Configuration:")
+    logger.info(f"  Allowed Origins: {config_settings.BACKEND_CORS_ORIGINS}")
+    logger.info(f"  Allow Credentials: True")
+    logger.info(f"  Allow Methods: ['*'] (all)")
+    logger.info(f"  Allow Headers: ['*'] (all)")
+    logger.info("=" * 50)
+    
+    # Initialize database and create tables
     logger.info("Starting up TRITIQ ERP API...")
     try:
         create_tables()
