@@ -297,15 +297,38 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         {!success && passwordChangeEnabled && (
           <Button
             onClick={() => {
-              console.log('🖱️ Change Password button clicked');
-              console.log('📊 Button state:', {
-                loading: loading,
-                disabled: loading,
-                passwordChangeEnabled: passwordChangeEnabled,
-                isRequired: isRequired,
-                success: success
-              });
-              handleSubmit(onSubmit)();
+              // Get current form values
+              const formValues = getValues();
+              
+              // Perform client-side validation
+              const hasNewPassword = !!formValues.new_password;
+              const hasConfirmPassword = !!formValues.confirm_password;
+              const passwordsMatch = formValues.new_password === formValues.confirm_password;
+              const hasCurrentPassword = !!formValues.current_password;
+              
+              // Check required fields
+              if (!hasNewPassword || !hasConfirmPassword) {
+                setError('New password and confirmation are required');
+                return;
+              }
+              
+              // Check password match
+              if (!passwordsMatch) {
+                setError('New passwords do not match');
+                return;
+              }
+              
+              // For non-required password changes, check current password
+              if (!isRequired && !hasCurrentPassword) {
+                setError('Current password is required');
+                return;
+              }
+              
+              // Clear any existing errors
+              setError(null);
+              
+              // Submit the form
+              onSubmit(formValues);
             }}
             variant="contained"
             disabled={loading}
