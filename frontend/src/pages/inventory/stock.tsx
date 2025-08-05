@@ -55,6 +55,9 @@ const StockManagement: React.FC = () => {
   const [showZero, setShowZero] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<'add' | 'replace'>('replace');
   const [selectedStock, setSelectedStock] = useState<any>(null);
   const [manualFormData, setManualFormData] = useState({ product_id: 0, quantity: 0, unit: '' });
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
@@ -71,7 +74,7 @@ const StockManagement: React.FC = () => {
     }
   });
 
-  const bulkImportMutation = useMutation((file: File) => masterDataService.bulkImportStock(file), {
+  const bulkImportMutation = useMutation(({ file, mode }: { file: File; mode: 'add' | 'replace' }) => masterDataService.bulkImportStock(file, mode), {
     onSuccess: () => {
       queryClient.invalidateQueries('stock');
       alert('Stock import completed successfully.');
@@ -104,17 +107,26 @@ const StockManagement: React.FC = () => {
     window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/stock/template/excel`, '_blank');
   };
 
-  const handleImport = () => {
+  const handleImportClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx, .xls';
     input.onchange = (e: any) => {
       const file = e.target.files[0];
       if (file) {
-        bulkImportMutation.mutate(file);
+        setSelectedFile(file);
+        setImportDialogOpen(true);  // Show prompt
       }
     };
     input.click();
+  };
+
+  const handleImportConfirm = (mode: 'add' | 'replace') => {
+    if (selectedFile) {
+      bulkImportMutation.mutate({ file: selectedFile, mode });
+    }
+    setImportDialogOpen(false);
+    setSelectedFile(null);
   };
 
   const handleExport = async () => {
@@ -170,6 +182,19 @@ const StockManagement: React.FC = () => {
     setManualFormData({ product_id: 0, quantity: 0, unit: '' });
     setEditFormData({ quantity: 0 });
   };
+
+  // Handle ESC key for canceling import dialog
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setImportDialogOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -232,35 +257,38 @@ const StockManagement: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
-        <Grid container spacing={2} sx={{ mt: 2 }}>
-          <Grid item>
-            <Button variant="contained" startIcon={<Add />} onClick={handleManualEntry}>
-              Manual Entry
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="contained" startIcon={<GetApp />} onClick={handleDownloadTemplate}>
-              Download Template
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="contained" startIcon={<Publish />} onClick={handleImport}>
-              Import
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="contained" startIcon={<GetApp />} onClick={handleExport}>
-              Export
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="contained" startIcon={<Print />} onClick={handlePrint}>
-              Print Stock
-            </Button>
-          </Grid>
-        </Grid>
       </Container>
+
+      {/* Floating button bar at bottom */}
+      <Box sx={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        bgcolor: 'background.paper',
+        boxShadow: 3,
+        p: 2,
+        display: 'flex',
+        justifyContent: 'center',
+        gap: 2,
+        zIndex: 1000
+      }}>
+        <Button variant="contained" startIcon={<Add />} onClick={handleManualEntry}>
+          Manual Entry
+        </Button>
+        <Button variant="contained" startIcon={<GetApp />} onClick={handleDownloadTemplate}>
+          Download Template
+        </Button>
+        <Button variant="contained" startIcon={<Publish />} onClick={handleImportClick}>
+          Import
+        </Button>
+        <Button variant="contained" startIcon={<GetApp />} onClick={handleExport}>
+          Export
+        </Button>
+        <Button variant="contained" startIcon={<Print />} onClick={handlePrint}>
+          Print Stock
+        </Button>
+      </Box>
 
       {/* Edit Stock Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
@@ -317,6 +345,31 @@ const StockManagement: React.FC = () => {
           <Button onClick={() => setManualDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveManual}>Save</Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Import Mode Prompt Dialog */}
+      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Import Stock</DialogTitle>
+        <DialogContent>
+          <Typography>Existing stock found. Do you want to:</Typography>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={6}>
+              <Button variant="contained" color="primary" fullWidth onClick={() => handleImportConfirm('replace')}>
+                Replace Stock
+              </Button>
+            </Grid>
+            <Grid item xs={6}>
+              <Button variant="contained" color="primary" fullWidth onClick={() => handleImportConfirm('add')}>
+                Add to Stock
+              </Button>
+            </Grid>
+          </Grid>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Button variant="text" onClick={() => setImportDialogOpen(false)}>
+              Cancel
+            </Button>
+          </Box>
+        </DialogContent>
       </Dialog>
     </Box>
   );

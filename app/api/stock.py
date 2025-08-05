@@ -290,12 +290,20 @@ async def adjust_stock(
 @router.post("/bulk", response_model=BulkImportResponse)
 async def bulk_import_stock(
     file: UploadFile = File(...),
+    mode: str = "replace",  # New parameter: 'add' or 'replace'
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Enhanced bulk import stock entries from Excel file with comprehensive validation"""
+    """Enhanced bulk import stock entries from Excel file with comprehensive validation and mode selection"""
     org_id = require_current_organization_id()
     start_time = datetime.utcnow()
+    
+    # Validate mode
+    if mode not in ['add', 'replace']:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid mode. Must be 'add' or 'replace'."
+        )
     
     # Validate file type
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -473,33 +481,35 @@ async def bulk_import_stock(
                 
                 location = str(record.get("location", "")).strip() or ""
                 
-                stock_data = {
-                    "quantity": quantity,
-                    "unit": unit.upper(),
-                    "location": location
-                }
-                
                 if not stock:
                     # Create new stock entry
                     new_stock = Stock(
                         organization_id=org_id,
                         product_id=product.id,
-                        **stock_data
+                        quantity=quantity,
+                        unit=unit.upper(),
+                        location=location
                     )
                     db.add(new_stock)
                     created_stocks += 1
                     logger.info(f"Created stock entry for: {product_name}")
                 else:
-                    # Update existing stock
+                    # Update existing stock based on mode
                     old_quantity = stock.quantity
-                    for field, value in stock_data.items():
-                        setattr(stock, field, value)
+                    if mode == 'add':
+                        new_quantity = old_quantity + quantity
+                    else:  # replace
+                        new_quantity = quantity
+                    
+                    stock.quantity = new_quantity
+                    stock.unit = unit.upper()
+                    stock.location = location
                     updated_stocks += 1
                     
-                    if old_quantity != quantity:
-                        warnings.append(f"Row {i}: Updated stock for '{product_name}' from {old_quantity} to {quantity}")
+                    if old_quantity != new_quantity:
+                        warnings.append(f"Row {i}: Updated stock for '{product_name}' from {old_quantity} to {new_quantity} (mode: {mode})")
                     
-                    logger.info(f"Updated stock for: {product_name}")
+                    logger.info(f"Updated stock for: {product_name} (mode: {mode})")
                     
             except Exception as e:
                 detailed_errors.append(BulkImportError(

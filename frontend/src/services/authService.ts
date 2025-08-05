@@ -367,11 +367,11 @@ export const masterDataService = {
       throw new Error(error.userMessage || 'Failed to adjust stock');
     }
   },
-  bulkImportStock: async (file: File) => {
+  bulkImportStock: async (file: File, mode: string = 'replace') => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await api.post('/v1/stock/bulk', formData, {
+      const response = await api.post(`/v1/stock/bulk?mode=${mode}`, formData, {
         headers: {
           'Content-Type': undefined,
         },
