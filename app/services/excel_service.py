@@ -22,8 +22,8 @@ class ExcelService:
             content = await file.read()
             excel_buffer = io.BytesIO(content)
             
-            # Use pandas to read Excel
-            df = pd.read_excel(excel_buffer, engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
+            # Use pandas to read Excel, specifying the sheet name for data
+            df = pd.read_excel(excel_buffer, sheet_name="Stock Import Template", engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
             
             # Clean column names
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
@@ -31,7 +31,8 @@ class ExcelService:
             # Validate required columns
             missing_columns = [col for col in required_columns if col.lower().replace(' ', '_') not in df.columns]
             if missing_columns:
-                raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
+                found_columns = ', '.join(df.columns)
+                raise ValueError(f"Missing required columns in 'Stock Import Template' sheet: {', '.join(missing_columns)}. Found columns: {found_columns}. Make sure to upload a data file with the correct sheet and headers, not the instructions sheet.")
             
             # Convert to list of dicts, handling NaN values
             records = df.replace({pd.NA: None, float('nan'): None}).to_dict(orient='records')
@@ -44,7 +45,7 @@ class ExcelService:
             raise
         except Exception as e:
             logger.error(f"Error parsing Excel file: {str(e)}")
-            raise ValueError(f"Invalid Excel file format: {str(e)}")
+            raise ValueError(f"Invalid Excel file format or missing 'Stock Import Template' sheet: {str(e)}. Please use the downloaded template and fill in the data sheet.")
 
     @staticmethod
     def create_streaming_response(excel_data: io.BytesIO, filename: str) -> StreamingResponse:
@@ -95,7 +96,7 @@ class StockExcelService(ExcelService):
             cell.border = thin_border
             cell.alignment = center_align
 
-        # Add sample data in the new order
+        # Add sample data
         sample_data = [
             "Steel Bolt M8x50",  # Product Name
             100,                 # Quantity
@@ -156,7 +157,7 @@ class StockExcelService(ExcelService):
                              top=Side(style='thin'), bottom=Side(style='thin'))
         center_align = Alignment(horizontal='center', vertical='center')
 
-        # Add headers in the new order
+        # Add headers
         headers = [
             "Product Name", "Quantity", "Unit", "HSN Code", "Part Number",
             "Unit Price", "GST Rate", "Reorder Level", "Location"
@@ -168,7 +169,7 @@ class StockExcelService(ExcelService):
             cell.border = thin_border
             cell.alignment = center_align
 
-        # Add data in the new order
+        # Add data
         for row_idx, item in enumerate(stock_data, 2):
             row_data = [
                 item.get("product_name"),

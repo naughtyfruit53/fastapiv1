@@ -335,7 +335,7 @@ export const masterDataService = {
   },
   getStock: async (params?: any) => {
     try {
-      const response = await api.get('/stock/', { params });
+      const response = await api.get('/v1/stock/', { params });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to fetch stock data');
@@ -343,7 +343,7 @@ export const masterDataService = {
   },
   getLowStock: async () => {
     try {
-      const response = await api.get('/stock/low-stock');
+      const response = await api.get('/v1/stock/low-stock');
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to fetch low stock data');
@@ -351,7 +351,7 @@ export const masterDataService = {
   },
   updateStock: async (productId: number, data: any) => {
     try {
-      const response = await api.put(`/stock/product/${productId}`, data);
+      const response = await api.put(`/v1/stock/product/${productId}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to update stock');
@@ -359,7 +359,7 @@ export const masterDataService = {
   },
   adjustStock: async (productId: number, quantityChange: number, reason: string) => {
     try {
-      const response = await api.post(`/stock/adjust/${productId}`, null, {
+      const response = await api.post(`/v1/stock/adjust/${productId}`, null, {
         params: { quantity_change: quantityChange, reason }
       });
       return response.data;
@@ -371,7 +371,7 @@ export const masterDataService = {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await api.post('/stock/bulk', formData, {
+      const response = await api.post('/v1/stock/bulk', formData, {
         headers: {
           'Content-Type': undefined,
         },
