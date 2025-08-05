@@ -23,3 +23,34 @@ export const getDisplayRole = (role: string, isSuperAdmin?: boolean): string => 
   }
   return role.charAt(0).toUpperCase() + role.slice(1);  // Capitalize unknown roles
 };
+
+// Permission utility functions to replace hardcoded role checks
+export const canManageUsers = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.is_super_admin === true || user.role === 'org_admin';
+};
+
+export const canResetPasswords = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.is_super_admin === true || user.role === 'org_admin';
+};
+
+export const canFactoryReset = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.is_super_admin === true || user.role === 'org_admin';
+};
+
+export const canAccessAdvancedSettings = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.is_super_admin === true || ['org_admin', 'admin'].includes(user.role);
+};
+
+export const isAppSuperAdmin = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.is_super_admin === true;
+};
+
+export const isOrgSuperAdmin = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.role === 'org_admin';
+};

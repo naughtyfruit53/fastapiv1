@@ -3,7 +3,7 @@
 import React from 'react';
 import FactoryReset from './FactoryReset';
 import { useAuth } from '../../context/AuthContext';
-import { getDisplayRole } from '../../types/user.types';
+import { getDisplayRole, canAccessAdvancedSettings } from '../../types/user.types';
 import { Card, Typography } from 'antd';
 
 const { Title, Text } = Typography;
@@ -11,7 +11,7 @@ const { Title, Text } = Typography;
 const Settings: React.FC = () => {
   const { user } = useAuth();
   const displayRole = getDisplayRole(user?.role || 'unknown', user?.is_super_admin);
-  const isAuthorized = user?.is_super_admin || ['super_admin', 'org_admin', 'admin'].includes(user?.role || '');
+  const isAuthorized = canAccessAdvancedSettings(user);
 
   console.log('Current user in Settings:', JSON.stringify(user, null, 2));
   console.log('Display Role:', displayRole);

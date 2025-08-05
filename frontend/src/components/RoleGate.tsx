@@ -13,7 +13,15 @@ const RoleGate: React.FC<RoleGateProps> = ({ allowedRoles, children }) => {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
+  // Check if user has super admin privileges or their role is in allowed roles
+  const hasAccess = user.is_super_admin === true || allowedRoles.includes(user.role);
+  
+  if (!hasAccess) {
     router.push('/login');
     return null;
   }

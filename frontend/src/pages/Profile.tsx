@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { passwordService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import { getDisplayRole } from '../types/user.types';
 
 const ProfilePage: React.FC = () => {
   const { user, loading } = useAuth();
@@ -92,7 +93,7 @@ const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Role"
-                value={user?.role || ''}
+                value={getDisplayRole(user?.role || '', user?.is_super_admin)}
                 disabled
               />
             </Grid>
