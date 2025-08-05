@@ -1,6 +1,6 @@
-# Revised: app/services/email_service.py (Using Brevo API)
+# Revised: app/services/email_service.py (Using Brevo API with SMTP Fallback)
 
-import random
+import secrets
 import string
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
@@ -20,6 +20,11 @@ import logging
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 
+# SMTP imports for fallback
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 # Assuming engine is defined in database.py; adjust if needed
 from app.core.database import engine
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -28,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
+        # Brevo config
         self.brevo_api_key = getattr(settings, 'BREVO_API_KEY', None)
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
         self.from_name = getattr(settings, 'BREVO_FROM_NAME', 'TRITIQ ERP')
@@ -42,28 +48,30 @@ class EmailService:
                 logger.error(f"Failed to initialize Brevo API client: {e}")
                 self.api_instance = None
         else:
-            logger.warning("Brevo API key not configured - email functionality will be limited")
+            logger.warning("Brevo API key not configured - falling back to SMTP")
             self.api_instance = None
         
+        # SMTP fallback config
+        self.smtp_host = getattr(settings, 'SMTP_HOST', None)
+        self.smtp_port = getattr(settings, 'SMTP_PORT', None)
+        self.smtp_username = getattr(settings, 'SMTP_USERNAME', None)
+        self.smtp_password = getattr(settings, 'SMTP_PASSWORD', None)
+        self.emails_from_email = getattr(settings, 'EMAILS_FROM_EMAIL', None)
+        
+        if not all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
+            logger.warning("SMTP configuration incomplete - email sending may be disabled")
+    
     def _validate_email_config(self) -> tuple[bool, str]:
         """Validate email configuration"""
-        if not self.brevo_api_key:
-            return False, "Brevo API key is missing"
-        return True, "Email configuration is valid"
+        if self.brevo_api_key:
+            return True, "Brevo configuration is valid"
+        elif all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
+            return True, "SMTP configuration is valid"
+        return False, "No valid email configuration found"
     
-    def _send_email(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """
-        Internal method to send an email via Brevo with enhanced error handling.
-        Returns tuple of (success: bool, error_message: Optional[str])
-        """
+    def _send_email_brevo(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
+        """Send email via Brevo"""
         try:
-            # Validate configuration
-            is_valid, error_msg = self._validate_email_config()
-            if not is_valid:
-                logger.warning(f"Email configuration invalid: {error_msg}")
-                log_email_operation("send", to_email, False, error_msg)
-                return False, error_msg
-            
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
                 to=[{"email": to_email}],
                 sender={"name": self.from_name, "email": self.from_email},
@@ -74,7 +82,7 @@ class EmailService:
                 send_smtp_email.html_content = html_body
             
             self.api_instance.send_transac_email(send_smtp_email)
-            logger.info(f"Email sent successfully to {to_email}")
+            logger.info(f"Email sent successfully via Brevo to {to_email}")
             log_email_operation("send", to_email, True)
             return True, None
             
@@ -85,10 +93,70 @@ class EmailService:
             return False, error_msg
             
         except Exception as e:
-            error_msg = f"Failed to send email: {str(e)}"
+            error_msg = f"Failed to send email via Brevo: {str(e)}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
             return False, error_msg
+    
+    def _send_email_smtp(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
+        """Send email via SMTP fallback"""
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = self.emails_from_email
+            msg['To'] = to_email
+            
+            # Plain text part
+            text_part = MIMEText(body, 'plain')
+            msg.attach(text_part)
+            
+            # HTML part if available
+            if html_body:
+                html_part = MIMEText(html_body, 'html')
+                msg.attach(html_part)
+            
+            # Connect to SMTP server
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_username, self.smtp_password)
+                server.send_message(msg)
+            
+            logger.info(f"Email sent successfully via SMTP to {to_email}")
+            log_email_operation("send", to_email, True)
+            return True, None
+            
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP error: {str(e)}"
+            logger.error(error_msg)
+            log_email_operation("send", to_email, False, error_msg)
+            return False, error_msg
+            
+        except Exception as e:
+            error_msg = f"Failed to send email via SMTP: {str(e)}"
+            logger.error(error_msg)
+            log_email_operation("send", to_email, False, error_msg)
+            return False, error_msg
+    
+    def _send_email(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
+        """
+        Internal method to send an email, trying Brevo first then SMTP fallback.
+        Returns tuple of (success: bool, error_message: Optional[str])
+        """
+        is_valid, error_msg = self._validate_email_config()
+        if not is_valid:
+            logger.warning(f"Email configuration invalid: {error_msg}")
+            log_email_operation("send", to_email, False, error_msg)
+            return False, error_msg
+        
+        # Try Brevo first if available
+        if self.api_instance:
+            success, error = self._send_email_brevo(to_email, subject, body, html_body)
+            if success:
+                return True, None
+            logger.warning(f"Brevo failed, falling back to SMTP: {error}")
+        
+        # Fallback to SMTP
+        return self._send_email_smtp(to_email, subject, body, html_body)
     
     def load_email_template(self, template_name: str, **kwargs) -> tuple[str, str]:
         """
@@ -210,8 +278,8 @@ TRITIQ ERP Team
             return False, error_msg
     
     def generate_otp(self, length: int = 6) -> str:
-        """Generate a random OTP"""
-        return ''.join(random.choices(string.digits, k=length))
+        """Generate a secure random OTP"""
+        return ''.join(secrets.choice(string.digits) for i in range(length))
     
     def send_otp_email(self, to_email: str, otp: str, purpose: str = "login") -> tuple[bool, Optional[str]]:
         """Send OTP via email with error handling"""

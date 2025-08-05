@@ -8,8 +8,7 @@ logger = logging.getLogger(__name__)
 # Determine database URL with fallback to SQLite
 database_url = settings.DATABASE_URL
 if not database_url:
-    database_url = "sqlite:///./tritiq_erp.db"
-    logger.info("No DATABASE_URL configured, using SQLite: tritiq_erp.db")
+    raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to the main server.")
 
 # Database engine configuration
 engine_kwargs = {

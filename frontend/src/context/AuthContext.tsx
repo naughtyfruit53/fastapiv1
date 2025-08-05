@@ -1,6 +1,7 @@
 // fastapi_migration/frontend/src/context/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/router';
 import { authService } from '../services/authService';
 
 interface User {
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
     checkAuth();
-  }, []);
+  }, [router]);
 
   const login = (token: string) => {
     localStorage.setItem('token', token);
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

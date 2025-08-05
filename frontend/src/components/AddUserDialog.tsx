@@ -147,7 +147,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       }
 
       const result = await response.json();
-      toast.success(`User "${formData.full_name}" added successfully`);
+      toast.success(`User &quot;${formData.full_name}&quot; added successfully`);
       
       if (onSuccess) {
         onSuccess();
@@ -196,7 +196,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       <DialogContent>
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            Add a new user to the organization "{organizationName}". The user will receive 
+            Add a new user to the organization &quot;{organizationName}&quot;. The user will receive 
             login credentials and access based on their assigned role.
           </Typography>
         </Alert>

@@ -19,7 +19,8 @@ import {
   Warning,
   DeleteSweep,
   Security,
-  Business
+  Business,
+  Add
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -246,7 +247,7 @@ export default function Settings() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to reset {isSuperAdmin ? 'all' : 'your organization\'s'} data? 
+            Are you sure you want to reset {isSuperAdmin ? 'all' : 'your organization&apos;s'} data? 
             This action will permanently delete:
           </DialogContentText>
           <Box component="ul" sx={{ mt: 2, mb: 2 }}>

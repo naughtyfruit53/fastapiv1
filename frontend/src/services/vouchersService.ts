@@ -3,6 +3,24 @@
 import api from './api';
 
 export const voucherService = {
+  // Generic Voucher Methods
+  getVouchers: async (type: string, params?: any) => {
+    const response = await api.get(`/vouchers/${type}`, { params });
+    return response.data;
+  },
+  getVoucherById: async (type: string, id: number) => {
+    const response = await api.get(`/vouchers/${type}/${id}`);
+    return response.data;
+  },
+  createVoucher: async (type: string, data: any, sendEmail: boolean = false) => {
+    const response = await api.post(`/vouchers/${type}/`, data, { params: { send_email: sendEmail } });
+    return response.data;
+  },
+  updateVoucher: async (type: string, id: number, data: any) => {
+    const response = await api.put(`/vouchers/${type}/${id}`, data);
+    return response.data;
+  },
+
   // Purchase Vouchers
   getPurchaseVoucherById: async (id: number) => {
     const response = await api.get(`/vouchers/purchase-vouchers/${id}`);

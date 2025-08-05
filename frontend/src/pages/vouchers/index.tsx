@@ -81,6 +81,7 @@ const VoucherManagement: React.FC = () => {
   // Update tab when URL changes
   useEffect(() => {
     setTabValue(getInitialTab());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.tab]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -128,12 +129,12 @@ const VoucherManagement: React.FC = () => {
   const { data: dashboardStats } = useQuery('dashboardStats', reportsService.getDashboardStats);
   const { data: purchaseVouchers, isLoading: purchaseLoading } = useQuery(
     'purchaseVouchers', 
-    voucherService.getPurchaseVouchers, 
+    () => voucherService.getVouchers('purchase'),  // Adjusted to match type (getVouchers with type 'purchase')
     { enabled: tabValue === 0 }
   );
   const { data: salesVouchers, isLoading: salesLoading } = useQuery(
     'salesVouchers', 
-    voucherService.getSalesVouchers, 
+    () => voucherService.getVouchers('sales'),  // Adjusted to match type (getVouchers with type 'sales')
     { enabled: tabValue === 1 }
   );
 

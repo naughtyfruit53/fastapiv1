@@ -1,6 +1,6 @@
 // Revised masters.index.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -150,13 +150,57 @@ const MasterDataManagement: React.FC = () => {
     reorder_level: 0, 
     description: '', 
     is_manufactured: false, 
-    drawings_path: ''
+    drawings_path: '',
+    contact_number: ''  // Added to match backend schema
   });
 
   // Company dialog state
   const [companyEditDialog, setCompanyEditDialog] = useState(false);
 
   const queryClient = useQueryClient();
+
+  const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+    const tabNames = ['vendors', 'customers', 'products', 'accounts', 'company'];
+    router.replace(`/masters?tab=${tabNames[newValue]}`, undefined, { shallow: true });
+  }, [router]);
+
+  const openItemDialog = useCallback((item: any = null, targetTab?: number) => {
+    if (targetTab !== undefined && targetTab !== tabValue) {
+      handleTabChange({} as React.SyntheticEvent, targetTab);
+    }
+    setSelectedItem(item);
+    if (item) {
+      setFormData({
+        name: item.product_name || '',  // Use product_name consistently
+        address1: item.address1 || item.address || '',
+        address2: item.address2 || '',
+        city: item.city || '',
+        state: item.state || '',
+        state_code: item.state_code || '',
+        pin_code: item.pin_code || '',
+        contact: item.contact_number || item.phone || '',
+        email: item.email || '',
+        gst_number: item.gst_number || '',
+        pan_number: item.pan_number || '',
+        part_number: item.part_number || '',
+        hsn_code: item.hsn_code || '',
+        unit: item.unit || '',
+        unit_price: item.unit_price || 0,
+        gst_rate: item.gst_rate || 0,
+        is_gst_inclusive: item.is_gst_inclusive || false,
+        reorder_level: item.reorder_level || 0,
+        description: item.description || '',
+        is_manufactured: item.is_manufactured || false,
+        drawings_path: item.drawings_path || '',
+        contact_number: item.contact_number || ''
+      });
+    } else {
+      resetForm();
+    }
+    setErrorMessage(''); // Clear any previous error messages
+    setItemDialog(true);
+  }, [tabValue, handleTabChange]);
 
   // Update tab from URL and handle auto-open add dialog
   useEffect(() => {
@@ -173,13 +217,7 @@ const MasterDataManagement: React.FC = () => {
     if (action === 'add') {
       openItemDialog(null);
     }
-  }, [tab, action]);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-    const tabNames = ['vendors', 'customers', 'products', 'accounts', 'company'];
-    router.replace(`/masters?tab=${tabNames[newValue]}`, undefined, { shallow: true });
-  };
+  }, [tab, action, openItemDialog]);
 
   const handleLogout = () => {
     // Handle logout
@@ -280,42 +318,6 @@ const MasterDataManagement: React.FC = () => {
     setCompanyEditDialog(false);
   };
 
-  const openItemDialog = (item: any = null, targetTab?: number) => {
-    if (targetTab !== undefined && targetTab !== tabValue) {
-      handleTabChange({} as React.SyntheticEvent, targetTab);
-    }
-    setSelectedItem(item);
-    if (item) {
-      setFormData({
-        name: item.product_name || '',  // Use product_name consistently
-        address1: item.address1 || item.address || '',
-        address2: item.address2 || '',
-        city: item.city || '',
-        state: item.state || '',
-        state_code: item.state_code || '',
-        pin_code: item.pin_code || '',
-        contact: item.contact_number || item.phone || '',
-        email: item.email || '',
-        gst_number: item.gst_number || '',
-        pan_number: item.pan_number || '',
-        part_number: item.part_number || '',
-        hsn_code: item.hsn_code || '',
-        unit: item.unit || '',
-        unit_price: item.unit_price || 0,
-        gst_rate: item.gst_rate || 0,
-        is_gst_inclusive: item.is_gst_inclusive || false,
-        reorder_level: item.reorder_level || 0,
-        description: item.description || '',
-        is_manufactured: item.is_manufactured || false,
-        drawings_path: item.drawings_path || ''
-      });
-    } else {
-      resetForm();
-    }
-    setErrorMessage(''); // Clear any previous error messages
-    setItemDialog(true);
-  };
-
   const resetForm = () => {
     setFormData({
       name: '', 
@@ -338,7 +340,8 @@ const MasterDataManagement: React.FC = () => {
       reorder_level: 0, 
       description: '', 
       is_manufactured: false, 
-      drawings_path: ''
+      drawings_path: '',
+      contact_number: ''
     });
   };
 
@@ -351,8 +354,8 @@ const MasterDataManagement: React.FC = () => {
     
     // Map frontend field names to backend schema
     if (tabValue === 0 || tabValue === 1) { // Vendors or Customers
-      data.contact_number = data.contact; // Map contact to contact_number
-      delete data.contact; // Remove old field name
+      data.contact_number = data.contact || data.contact_number; // Map contact to contact_number if needed
+      delete data.contact; // Remove old field name if present
     }
     
     if (selectedItem) {
@@ -442,7 +445,7 @@ const MasterDataManagement: React.FC = () => {
     }
     
     if (!data || data.length === 0) {
-      return <Typography>No {type} found. Click "Add" to create your first entry.</Typography>;
+      return <Typography>No {type} found. Click &quot;Add&quot; to create your first entry.</Typography>;
     }
 
     return (
@@ -535,7 +538,7 @@ const MasterDataManagement: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <IconButton size="small" color="primary" onClick={() => openItemDialog(item)}>
-                        <Edit/>
+                        <Edit />
                       </IconButton>
                       <IconButton size="small" color="info">
                         <Visibility />

@@ -90,7 +90,7 @@ const SalesVoucherPage: React.FC = () => {
 
   const { data: voucherList, isLoading: isLoadingList } = useQuery(
     ['salesVouchers'],
-    () => voucherService.getSalesVouchers() // Assume this method exists
+    () => voucherService.getVouchers('sales_voucher')
   );
 
   const { data: customerList } = useQuery(
@@ -105,7 +105,7 @@ const SalesVoucherPage: React.FC = () => {
 
   const { data: voucherData, isLoading: isFetching } = useQuery(
     ['salesVoucher', selectedId],
-    () => voucherService.getSalesVoucherById(selectedId!),
+    () => voucherService.getVoucherById('sales_voucher', selectedId!),
     { enabled: !!selectedId }
   );
 
@@ -125,7 +125,7 @@ const SalesVoucherPage: React.FC = () => {
     }
   }, [voucherData, mode, reset]);
 
-  const createMutation = useMutation((data: any) => voucherService.createSalesVoucher(data), {
+  const createMutation = useMutation((data: any) => voucherService.createVoucher('sales_voucher', data), {
     onSuccess: () => {
       queryClient.invalidateQueries('salesVouchers');
       setMode('create');
@@ -136,7 +136,7 @@ const SalesVoucherPage: React.FC = () => {
     }
   });
 
-  const updateMutation = useMutation((data: any) => voucherService.updateSalesVoucher(selectedId!, data), {
+  const updateMutation = useMutation((data: any) => voucherService.updateVoucher('sales_voucher', selectedId!, data), {
     onSuccess: () => {
       queryClient.invalidateQueries('salesVouchers');
       setMode('view');
@@ -165,37 +165,6 @@ const SalesVoucherPage: React.FC = () => {
     setMode('view');
     router.push({ query: { id: voucherId, mode: 'view' } }, undefined, { shallow: true });
   };
-
-  // Handle adding new customer from voucher form
-  const handleAddCustomer = () => {
-    // Open customer add dialog (navigate to masters with customer tab and add mode)
-    window.open('/masters?tab=customers&action=add', '_blank', 'width=800,height=600');
-  };
-
-  // Handle adding new product from voucher form
-  const handleAddProduct = () => {
-    // Open product add dialog (navigate to masters with product tab and add mode)
-    window.open('/masters?tab=products&action=add', '_blank', 'width=800,height=600');
-  };
-
-  // Refresh customer and product lists (called when add dialogs are closed)
-  const refreshMasterData = () => {
-    queryClient.invalidateQueries('customers');
-    queryClient.invalidateQueries('products');
-  };
-
-  // Listen for storage events to refresh data when new items are added
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'refreshMasterData') {
-        refreshMasterData();
-        localStorage.removeItem('refreshMasterData');
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [queryClient]);
 
   if (isLoadingList || isFetching) {
     return <CircularProgress />;
@@ -271,30 +240,18 @@ const SalesVoucherPage: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Select
-                      fullWidth
-                      {...control.register('customer', { required: true })}
-                      error={!!errors.customer}
-                      disabled={isViewMode}
-                      displayEmpty
-                    >
-                      <MenuItem value="" disabled>Select Customer</MenuItem>
-                      {customerList?.map((customer: any) => (
-                        <MenuItem key={customer.id} value={customer.id}>{customer.name}</MenuItem>
-                      ))}
-                    </Select>
-                    {!isViewMode && (
-                      <Button
-                        variant="outlined"
-                        startIcon={<Add />}
-                        onClick={handleAddCustomer}
-                        sx={{ minWidth: 100 }}
-                      >
-                        Add Customer
-                      </Button>
-                    )}
-                  </Box>
+                  <Select
+                    fullWidth
+                    {...control.register('customer', { required: true })}
+                    error={!!errors.customer}
+                    disabled={isViewMode}
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>Select Customer</MenuItem>
+                    {customerList?.map((customer: any) => (
+                      <MenuItem key={customer.id} value={customer.id}>{customer.name}</MenuItem>
+                    ))}
+                  </Select>
                   {errors.customer && <Typography color="error" variant="caption">Required</Typography>}
                 </Grid>
                 <Grid item xs={6}>
@@ -310,31 +267,18 @@ const SalesVoucherPage: React.FC = () => {
                   {fields.map((field, index) => (
                     <Grid container spacing={2} key={field.id} sx={{ mb: 2 }}>
                       <Grid item xs={3}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Select
-                            fullWidth
-                            {...control.register(`items.${index}.name`, { required: true })}
-                            error={!!errors.items?.[index]?.name}
-                            disabled={isViewMode}
-                            displayEmpty
-                          >
-                            <MenuItem value="" disabled>Select Product</MenuItem>
-                            {productList?.map((product: any) => (
-                              <MenuItem key={product.id} value={product.product_name}>{product.product_name}</MenuItem>
-                            ))}
-                          </Select>
-                          {!isViewMode && index === 0 && (
-                            <Button
-                              variant="outlined"
-                              startIcon={<Add />}
-                              onClick={handleAddProduct}
-                              sx={{ minWidth: 80, fontSize: '0.75rem' }}
-                              size="small"
-                            >
-                              Add
-                            </Button>
-                          )}
-                        </Box>
+                        <Select
+                          fullWidth
+                          {...control.register(`items.${index}.name`, { required: true })}
+                          error={!!errors.items?.[index]?.name}
+                          disabled={isViewMode}
+                          displayEmpty
+                        >
+                          <MenuItem value="" disabled>Select Product</MenuItem>
+                          {productList?.map((product: any) => (
+                            <MenuItem key={product.id} value={product.product_name}>{product.product_name}</MenuItem>
+                          ))}
+                        </Select>
                         {errors.items?.[index]?.name && <Typography color="error" variant="caption">Required</Typography>}
                       </Grid>
                       <Grid item xs={2}>

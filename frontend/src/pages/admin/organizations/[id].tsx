@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 interface Organization {
   id: number;
@@ -67,11 +68,13 @@ const OrganizationDetailPage: React.FC = () => {
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [resetPassword, setResetPassword] = useState<string | null>(null);
   const [resetSnackbarOpen, setResetSnackbarOpen] = useState(false);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchOrganization();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchOrganization = async () => {
@@ -154,6 +157,24 @@ const OrganizationDetailPage: React.FC = () => {
         ...editedOrg,
         [field]: value,
       });
+    }
+  };
+
+  const handlePincodeChange = async (value: string) => {
+    handleInputChange('pin_code', value);
+    if (value.length === 6 && editing) {
+      setPincodeLoading(true);
+      try {
+        const response = await axios.get(`/api/pincode/lookup/${value}`);
+        const { city, state } = response.data;
+        handleInputChange('city', city);
+        handleInputChange('state', state);
+      } catch (error) {
+        console.error('Failed to lookup pincode:', error);
+        toast.error('Failed to autofill city and state from PIN code');
+      } finally {
+        setPincodeLoading(false);
+      }
     }
   };
 
@@ -395,6 +416,18 @@ const OrganizationDetailPage: React.FC = () => {
                     disabled={!editing}
                   />
                 </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="PIN Code"
+                    value={currentOrg.pin_code}
+                    onChange={(e) => handlePincodeChange(e.target.value)}
+                    disabled={!editing}
+                    InputProps={{
+                      endAdornment: pincodeLoading ? <CircularProgress size={20} /> : null,
+                    }}
+                  />
+                </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
@@ -413,16 +446,7 @@ const OrganizationDetailPage: React.FC = () => {
                     disabled={!editing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="PIN Code"
-                    value={currentOrg.pin_code}
-                    onChange={(e) => handleInputChange('pin_code', e.target.value)}
-                    disabled={!editing}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Country"
@@ -523,7 +547,7 @@ const OrganizationDetailPage: React.FC = () => {
         <DialogTitle>Reset Password</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to reset the password for this organization's admin?
+            Are you sure you want to reset the password for this organization&apos;s admin?
             The new password will be emailed and also shown here for manual sharing.
           </Typography>
         </DialogContent>

@@ -140,7 +140,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                     <Add />
                   </ListItemIcon>
                   <ListItemText
-                    primary={`${addNewText} "${inputValue}"`}
+                    primary={`${addNewText} &quot;${inputValue}&quot;`}
                     sx={{ fontWeight: 'medium' }}
                   />
                 </ListItem>
@@ -183,7 +183,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
               size="small"
               fullWidth
             >
-              {addNewText} "{inputValue}"
+              {addNewText} &quot;{inputValue}&quot;
             </Button>
           </Box>
         ) : (

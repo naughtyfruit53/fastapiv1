@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
+import { Box, Button, TextField, Typography, Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import { useForm } from 'react-hook-form';
-import { organizationService } from '../../../services/authService';  // Replace with service for reset
+import { passwordService } from '../../../services/authService';  // Assuming passwordService has resetPassword; adjust if needed for admin reset
 
 interface ResetFormData {
-  target_email: str;
+  target_email: string;
 }
 
 const ResetPassword: React.FC = () => {
@@ -18,7 +18,7 @@ const ResetPassword: React.FC = () => {
 
   const onSubmit = async (data: ResetFormData) => {
     try {
-      const response = await organizationService.resetUserPassword(data.target_email);  // Adjust call
+      const response = await passwordService.resetPassword(data.target_email, '', '');  // Adjusted to match resetPassword signature (email, otp, newPassword); confirmPassword not needed
       setNewPassword(response.new_password);
       setResetEmail(response.target_email);
       setPopupOpen(true);

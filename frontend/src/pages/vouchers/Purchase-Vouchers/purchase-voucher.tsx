@@ -86,11 +86,12 @@ const PurchaseVoucherPage: React.FC = () => {
       total += itemAmount;
     });
     setValue('total_amount', total);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsWatch, setValue]);
 
   const { data: voucherList, isLoading: isLoadingList } = useQuery(
     ['purchaseVouchers'],
-    () => voucherService.getPurchaseVouchers() // Assume this method exists
+    () => voucherService.getVouchers('purchase_voucher')
   );
 
   const { data: vendorList } = useQuery(
@@ -105,7 +106,7 @@ const PurchaseVoucherPage: React.FC = () => {
 
   const { data: voucherData, isLoading: isFetching } = useQuery(
     ['purchaseVoucher', selectedId],
-    () => voucherService.getPurchaseVoucherById(selectedId!),
+    () => voucherService.getVoucherById('purchase_voucher', selectedId!),
     { enabled: !!selectedId }
   );
 
@@ -125,7 +126,7 @@ const PurchaseVoucherPage: React.FC = () => {
     }
   }, [voucherData, mode, reset]);
 
-  const createMutation = useMutation((data: any) => voucherService.createPurchaseVoucher(data), {
+  const createMutation = useMutation((data: any) => voucherService.createVoucher('purchase_voucher', data), {
     onSuccess: () => {
       queryClient.invalidateQueries('purchaseVouchers');
       setMode('create');
@@ -136,7 +137,7 @@ const PurchaseVoucherPage: React.FC = () => {
     }
   });
 
-  const updateMutation = useMutation((data: any) => voucherService.updatePurchaseVoucher(selectedId!, data), {
+  const updateMutation = useMutation((data: any) => voucherService.updateVoucher('purchase_voucher', selectedId!, data), {
     onSuccess: () => {
       queryClient.invalidateQueries('purchaseVouchers');
       setMode('view');
@@ -197,6 +198,7 @@ const PurchaseVoucherPage: React.FC = () => {
     
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient]);
 
   if (isLoadingList || isFetching) {

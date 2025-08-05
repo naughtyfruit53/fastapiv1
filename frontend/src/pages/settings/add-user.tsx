@@ -124,7 +124,7 @@ const AddUser: React.FC = () => {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          You don't have permission to add users. Only organization administrators can add users.
+          You don&apos;t have permission to add users. Only organization administrators can add users.
         </Alert>
         <Button 
           startIcon={<ArrowBack />} 

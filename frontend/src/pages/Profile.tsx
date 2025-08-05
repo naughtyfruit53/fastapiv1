@@ -14,13 +14,17 @@ import { passwordService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +41,7 @@ const ProfilePage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       const response = await passwordService.changePassword(currentPassword, newPassword);
       setSuccess(response.message || 'Password changed successfully');
@@ -48,7 +52,7 @@ const ProfilePage: React.FC = () => {
       console.error('Password change error:', err); // Log full error for debugging
       setError(err.userMessage || err.message || 'Failed to change password. Please try again.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -126,9 +130,9 @@ const ProfilePage: React.FC = () => {
             variant="contained"
             fullWidth
             sx={{ mt: 3 }}
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? <CircularProgress size={24} /> : 'Change Password'}
+            {isSubmitting ? <CircularProgress size={24} /> : 'Change Password'}
           </Button>
         </Box>
       </Paper>

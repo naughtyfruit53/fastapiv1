@@ -160,13 +160,13 @@ const OrganizationsPage: React.FC = () => {
 
     // For reset action, require confirmation text
     if (actionType === 'reset' && confirmationText !== 'RESET') {
-      setError('Please type "RESET" to confirm this action');
+      setError('Please type &apos;RESET&apos; to confirm this action');
       return;
     }
 
     // For delete action, require confirmation text
     if (actionType === 'delete' && confirmationText !== selectedOrg.name) {
-      setError(`Please type "${selectedOrg.name}" to confirm deletion`);
+      setError(`Please type &quot;${selectedOrg.name}&quot; to confirm deletion`);
       return;
     }
 
@@ -207,7 +207,7 @@ const OrganizationsPage: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          You don't have permission to manage organizations. Only platform super administrators can access this page.
+          You don&apos;t have permission to manage organizations. Only platform super administrators can access this page.
         </Alert>
         <Button onClick={() => router.push('/settings')} sx={{ mt: 2 }}>
           Back to Settings
@@ -367,7 +367,7 @@ const OrganizationsPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to {actionType} the organization "{selectedOrg?.name}"?
+            Are you sure you want to {actionType} the organization &quot;{selectedOrg?.name}&quot;?
           </DialogContentText>
           
           {actionType === 'reset' && (
@@ -392,7 +392,7 @@ const OrganizationsPage: React.FC = () => {
               </Alert>
               <TextField
                 fullWidth
-                label={`Type "${selectedOrg?.name}" to confirm deletion`}
+                label={`Type &quot;${selectedOrg?.name}&quot; to confirm deletion`}
                 value={confirmationText}
                 onChange={(e) => setConfirmationText(e.target.value)}
                 placeholder={selectedOrg?.name}

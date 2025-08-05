@@ -90,7 +90,7 @@ const RejectionOutPage: React.FC = () => {
 
   const { data: voucherList, isLoading: isLoadingList } = useQuery(
     ['rejectionOuts'],
-    () => voucherService.getRejectionOuts() // Assume this method exists
+    () => voucherService.getVouchers('rejection_out')
   );
 
   const { data: customerList } = useQuery(
@@ -105,7 +105,7 @@ const RejectionOutPage: React.FC = () => {
 
   const { data: voucherData, isLoading: isFetching } = useQuery(
     ['rejectionOut', selectedId],
-    () => voucherService.getRejectionOutById(selectedId!),
+    () => voucherService.getVoucherById('rejection_out', selectedId!),
     { enabled: !!selectedId }
   );
 
@@ -125,7 +125,7 @@ const RejectionOutPage: React.FC = () => {
     }
   }, [voucherData, mode, reset]);
 
-  const createMutation = useMutation((data: any) => voucherService.createRejectionOut(data), {
+  const createMutation = useMutation((data: any) => voucherService.createVoucher('rejection_out', data), {
     onSuccess: () => {
       queryClient.invalidateQueries('rejectionOuts');
       setMode('create');
@@ -136,7 +136,7 @@ const RejectionOutPage: React.FC = () => {
     }
   });
 
-  const updateMutation = useMutation((data: any) => voucherService.updateRejectionOut(selectedId!, data), {
+  const updateMutation = useMutation((data: any) => voucherService.updateVoucher('rejection_out', selectedId!, data), {
     onSuccess: () => {
       queryClient.invalidateQueries('rejectionOuts');
       setMode('view');

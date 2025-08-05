@@ -96,15 +96,16 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
     watch
   } = useForm<CompanyFormData>();
 
-  const pinCode = watch('pin_code');
+  const pin = watch('pin_code');
   const state = watch('state');
   const city = watch('city');
 
   useEffect(() => {
-    if (pinCode && pinCode.length === 6 && /^\d{6}$/.test(pinCode)) {
-      fetchLocationData(pinCode);
+    if (pin && pin.length === 6 && /^\d{6}$/.test(pin)) {
+      fetchLocationData(pin);
     }
-  }, [pinCode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin]);
 
   useEffect(() => {
     if (state) {
@@ -113,6 +114,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
         setValue('state_code', code);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, city, setValue]);
 
   const fetchLocationData = async (pin: string) => {

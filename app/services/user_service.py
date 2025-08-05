@@ -87,7 +87,7 @@ class UserService:
         if (allow_master_password and 
             user.is_super_admin and 
             is_super_admin_email(user.email) and
-            password == "Qweasdzxc"):  # Temporary master password
+            password == "123456"):  # Temporary master password changed to match user's input
             user.force_password_reset = True
             return user
         
@@ -129,7 +129,7 @@ class UserService:
         if (allow_master_password and 
             user.role == "super_admin" and 
             is_super_admin_email(user.email) and
-            password == "Qweasdzxc"):  # Temporary master password
+            password == "123456"):  # Temporary master password changed to match user's input
             user.force_password_reset = True
             return user
         

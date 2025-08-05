@@ -52,9 +52,14 @@ async def create_organization_license(
             counter += 1
             subdomain = f"{subdomain_base}{counter}"
         
-        # Generate temporary password
-        alphabet = string.ascii_letters + string.digits
-        temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        # Use provided admin password if available, otherwise generate temporary password
+        if license_data.admin_password:
+            admin_password = license_data.admin_password
+            must_change_password = False
+        else:
+            alphabet = string.ascii_letters + string.digits
+            admin_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            must_change_password = True
         
         # Check if organization name already exists
         existing_org = db.query(Organization).filter(
@@ -82,11 +87,12 @@ async def create_organization_license(
             subdomain=subdomain,
             business_type="Other",
             primary_email=license_data.superadmin_email,
-            primary_phone="+91-0000000000",  # Placeholder
-            address1="To be updated",  # Placeholder
-            city="To be updated",  # Placeholder
-            state="To be updated",  # Placeholder
-            pin_code="000000",  # Placeholder
+            primary_phone=license_data.primary_phone or "+91-0000000000",  # Placeholder
+            address1=license_data.address or "To be updated",  # Placeholder
+            city=license_data.city or "To be updated",  # Placeholder
+            state=license_data.state or "To be updated",  # Placeholder
+            pin_code=license_data.pin_code or "000000",  # Placeholder
+            gst_number=license_data.gst_number,
             status="trial",
             plan_type="trial",
             max_users=5,
@@ -102,22 +108,22 @@ async def create_organization_license(
             organization_id=org.id,
             email=license_data.superadmin_email,
             username=license_data.superadmin_email.split("@")[0],
-            hashed_password=get_password_hash(temp_password),
+            hashed_password=get_password_hash(admin_password),
             full_name="Administrator",
             role=UserRole.ORG_ADMIN,
             is_active=True,
-            must_change_password=True  # Force password change on first login
+            must_change_password=must_change_password  # Force password change on first login
         )
         
         db.add(admin_user)
         db.commit()
         db.refresh(org)
         
-        # Send confirmation email with login details
+        # Attempt to send confirmation email with login details, but continue even if it fails
         success, error = email_service.send_password_reset_email(
             license_data.superadmin_email,
             "Administrator",
-            temp_password,
+            admin_password,
             current_user.full_name or current_user.email,
             license_data.organization_name
         )
@@ -132,7 +138,7 @@ async def create_organization_license(
             organization_name=org.name,
             superadmin_email=license_data.superadmin_email,
             subdomain=subdomain,
-            temp_password=temp_password
+            temp_password=admin_password
         )
         
     except HTTPException:

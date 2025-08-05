@@ -120,8 +120,8 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
 
         <Typography variant="body1" gutterBottom>
           {resetType === 'organization' 
-            ? `This will permanently delete ALL data for the current organization${organizationName ? ` "${organizationName}"` : ''}.`
-            : `This will permanently delete ALL data for the selected entity${organizationName ? ` "${organizationName}"` : ''}.`
+            ? `This will permanently delete ALL data for the current organization${organizationName ? ` &quot;${organizationName}&quot;` : ''}.`
+            : `This will permanently delete ALL data for the selected entity${organizationName ? ` &quot;${organizationName}&quot;` : ''}.`
           }
         </Typography>
 
@@ -147,7 +147,7 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" gutterBottom>
-            1. Type "{expectedConfirmText}" in the box below:
+            1. Type &quot;{expectedConfirmText}&quot; in the box below:
           </Typography>
           <TextField
             fullWidth

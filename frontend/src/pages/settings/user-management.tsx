@@ -445,16 +445,6 @@ const UserManagement: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -638,7 +628,7 @@ const UserManagement: React.FC = () => {
           </Typography>
           {actionType === 'reset' && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              A new temporary password will be generated and sent to the user's email.
+              A new temporary password will be generated and sent to the user&apos;s email.
             </Alert>
           )}
           {actionType === 'delete' && (

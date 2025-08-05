@@ -90,7 +90,7 @@ const NonSalesCreditNotePage: React.FC = () => {
 
   const { data: voucherList, isLoading: isLoadingList } = useQuery(
     ['nonSalesCreditNotes'],
-    () => voucherService.getNonSalesCreditNotes() // Assume this method exists
+    () => voucherService.getVouchers('non_sales_credit_note')
   );
 
   const { data: customerList } = useQuery(
@@ -105,7 +105,7 @@ const NonSalesCreditNotePage: React.FC = () => {
 
   const { data: voucherData, isLoading: isFetching } = useQuery(
     ['nonSalesCreditNote', selectedId],
-    () => voucherService.getNonSalesCreditNoteById(selectedId!),
+    () => voucherService.getVoucherById('non_sales_credit_note', selectedId!),
     { enabled: !!selectedId }
   );
 
@@ -125,7 +125,7 @@ const NonSalesCreditNotePage: React.FC = () => {
     }
   }, [voucherData, mode, reset]);
 
-  const createMutation = useMutation((data: any) => voucherService.createNonSalesCreditNote(data), {
+  const createMutation = useMutation((data: any) => voucherService.createVoucher('non_sales_credit_note', data), {
     onSuccess: () => {
       queryClient.invalidateQueries('nonSalesCreditNotes');
       setMode('create');
@@ -136,7 +136,7 @@ const NonSalesCreditNotePage: React.FC = () => {
     }
   });
 
-  const updateMutation = useMutation((data: any) => voucherService.updateNonSalesCreditNote(selectedId!, data), {
+  const updateMutation = useMutation((data: any) => voucherService.updateVoucher('non_sales_credit_note', selectedId!, data), {
     onSuccess: () => {
       queryClient.invalidateQueries('nonSalesCreditNotes');
       setMode('view');
