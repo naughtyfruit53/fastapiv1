@@ -392,8 +392,16 @@ async def bulk_import_stock(
                     # Create new product if not exists with enhanced validation
                     try:
                         # Validate and clean optional fields
-                        hsn_code = str(record.get("hsn_code", "")).strip() or None
-                        part_number = str(record.get("part_number", "")).strip() or None
+                        def to_optional(value):
+                            if value is None:
+                                return None
+                            val_str = str(value).strip().lower()
+                            if val_str in ['', 'none', 'null', 'na', 'nan']:
+                                return None
+                            return str(value).strip()
+                        
+                        hsn_code = to_optional(record.get("hsn_code"))
+                        part_number = to_optional(record.get("part_number"))
                         
                         # Validate numeric fields
                         try:

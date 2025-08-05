@@ -224,7 +224,7 @@ class TestExcelImportExport:
         excel_file = create_test_excel_file(test_data)
         
         response = client.post(
-            "/api/v1/stock/import/excel",
+            "/api/v1/stock/bulk",
             headers={"Authorization": f"Bearer {token}"},
             files={"file": ("test_stock.xlsx", excel_file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
         )
@@ -284,6 +284,69 @@ class TestExcelImportExport:
         df = pd.read_excel(excel_data)
         assert len(df) >= 1
         assert "Export Test Product" in df["Name"].values
+
+    def test_stock_template_download(self, client, test_admin_user, test_organization):
+        """Test stock template download"""
+        token = get_auth_token(client, "admin@example.com", "adminpass123")
+        
+        if not token:
+            pytest.skip("Could not get authentication token")
+        
+        response = client.get(
+            "/api/v1/stock/template/excel",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert "stock_template.xlsx" in response.headers["content-disposition"]
+
+    def test_stock_export(self, client, test_admin_user, test_organization, test_db):
+        """Test stock export functionality"""
+        token = get_auth_token(client, "admin@example.com", "adminpass123")
+        
+        if not token:
+            pytest.skip("Could not get authentication token")
+        
+        # Create test product and stock
+        product = Product(
+            organization_id=test_organization.id,
+            name="Stock Export Test Product",
+            hsn_code="88888888",
+            unit="PCS",
+            unit_price=150.0,
+            gst_rate=18.0,
+            reorder_level=10
+        )
+        test_db.add(product)
+        test_db.commit()
+        test_db.refresh(product)
+        
+        stock = Stock(
+            organization_id=test_organization.id,
+            product_id=product.id,
+            quantity=75,
+            unit="PCS",
+            location="Warehouse C"
+        )
+        test_db.add(stock)
+        test_db.commit()
+        
+        response = client.get(
+            "/api/v1/stock/export/excel",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert "stock_export.xlsx" in response.headers["content-disposition"]
+        
+        # Verify Excel content
+        excel_data = io.BytesIO(response.content)
+        df = pd.read_excel(excel_data)
+        assert len(df) >= 1
+        assert "Stock Export Test Product" in df["Product Name"].values
+        assert 75 in df["Quantity"].values
 
 class TestOrganizationUserManagement:
     """Test organization and user management features"""

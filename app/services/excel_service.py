@@ -1,269 +1,626 @@
-"""
-Excel service for handling import/export operations for all entities.
-Provides reusable functions for parsing Excel files, creating templates, and exporting data.
-"""
+# app/services/excel_service.py
 
 import io
-import pandas as pd
-from typing import List, Dict, Any, Tuple, Optional
-from sqlalchemy.orm import Session
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
-from fastapi import UploadFile, HTTPException
-from fastapi.responses import StreamingResponse
 import logging
+import pandas as pd
+from typing import List, Dict, Optional
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 
 logger = logging.getLogger(__name__)
 
 class ExcelService:
-    """Service class for Excel operations"""
-    
     @staticmethod
-    def create_streaming_response(excel_data: bytes, filename: str) -> StreamingResponse:
-        """Create a streaming response for Excel file download"""
-        return StreamingResponse(
-            io.BytesIO(excel_data),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-    
-    @staticmethod
-    async def parse_excel_file(file: UploadFile, expected_columns: List[str] = None) -> List[Dict[str, Any]]:
+    async def parse_excel_file(file, required_columns: List[str]) -> List[Dict]:
         """
-        Parse uploaded Excel file and return list of dictionaries
+        Parse Excel file and return list of dictionaries.
+        Supports both .xlsx and .xls formats.
         """
         try:
-            # Read file content
+            # Read the uploaded file content
             content = await file.read()
+            excel_buffer = io.BytesIO(content)
             
-            # Try to read as Excel file
-            try:
-                df = pd.read_excel(io.BytesIO(content))
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Invalid Excel file format: {str(e)}")
+            # Use pandas to read Excel
+            df = pd.read_excel(excel_buffer, engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
             
-            # Check if file is empty
-            if df.empty:
-                raise HTTPException(status_code=400, detail="Excel file is empty")
-            
-            # Clean column names (strip whitespace, normalize)
+            # Clean column names
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
             
-            # Validate expected columns if provided
-            if expected_columns:
-                normalized_expected = [col.lower().replace(' ', '_') for col in expected_columns]
-                missing_cols = set(normalized_expected) - set(df.columns)
-                if missing_cols:
-                    raise HTTPException(
-                        status_code=400, 
-                        detail=f"Missing required columns: {', '.join(missing_cols)}"
-                    )
+            # Validate required columns
+            missing_columns = [col for col in required_columns if col.lower().replace(' ', '_') not in df.columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
             
-            # Convert to list of dictionaries, handling NaN values
-            records = df.replace({pd.NA: None, float('nan'): None}).to_dict('records')
+            # Convert to list of dicts, handling NaN values
+            records = df.replace({pd.NA: None, float('nan'): None}).to_dict(orient='records')
             
-            # Clean up records - remove empty rows
-            cleaned_records = []
-            for record in records:
-                # Skip rows where all values are empty/None
-                if any(value is not None and str(value).strip() for value in record.values()):
-                    # Clean values
-                    cleaned_record = {}
-                    for key, value in record.items():
-                        if value is None or (isinstance(value, str) and not value.strip()):
-                            cleaned_record[key] = None
-                        elif isinstance(value, str):
-                            cleaned_record[key] = value.strip()
-                        else:
-                            cleaned_record[key] = value
-                    cleaned_records.append(cleaned_record)
+            logger.info(f"Successfully parsed {len(records)} records from Excel file")
+            return records
             
-            return cleaned_records
-            
-        except HTTPException:
+        except ValueError as ve:
+            logger.error(f"Excel validation error: {str(ve)}")
             raise
         except Exception as e:
             logger.error(f"Error parsing Excel file: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error processing Excel file: {str(e)}")
-    
+            raise ValueError(f"Invalid Excel file format: {str(e)}")
+
     @staticmethod
-    def create_template_excel(columns: List[Dict[str, Any]], filename: str) -> bytes:
-        """
-        Create Excel template with specified columns and formatting
-        columns format: [{"name": "Column Name", "example": "Example Value", "width": 15}]
-        """
+    def create_streaming_response(excel_data: io.BytesIO, filename: str) -> StreamingResponse:
+        """Create streaming response for Excel download"""
+        headers = {
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+        return StreamingResponse(
+            iter([excel_data.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers
+        )
+
+class StockExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "Product Name",
+        "Quantity",
+        "Unit",
+        "HSN Code",
+        "Part Number",
+        "Unit Price",
+        "GST Rate",
+        "Reorder Level",
+        "Location"
+    ]
+
+    @staticmethod
+    def create_template() -> io.BytesIO:
+        """Create Excel template for stock import with styling and sample data"""
         wb = Workbook()
         ws = wb.active
-        ws.title = "Template"
-        
-        # Header style
+        ws.title = "Stock Import Template"
+
+        # Define styles
         header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        header_alignment = Alignment(horizontal="center", vertical="center")
-        
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
         # Add headers
-        for col_idx, col_info in enumerate(columns, 1):
-            cell = ws.cell(row=1, column=col_idx, value=col_info["name"])
+        headers = StockExcelService.REQUIRED_COLUMNS
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = header_alignment
-            
-            # Set column width
-            column_letter = chr(64 + col_idx)  # A, B, C, etc.
-            ws.column_dimensions[column_letter].width = col_info.get("width", 15)
-        
-        # Add example row
-        for col_idx, col_info in enumerate(columns, 1):
-            example_value = col_info.get("example", "")
-            ws.cell(row=2, column=col_idx, value=example_value)
-        
-        # Save to bytes
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data in the new order
+        sample_data = [
+            "Steel Bolt M8x50",  # Product Name
+            100,                 # Quantity
+            "PCS",               # Unit
+            "73181590",          # HSN Code
+            "SB-M8-50",          # Part Number
+            25.50,               # Unit Price
+            18.0,                # GST Rate
+            50,                  # Reorder Level
+            "Warehouse A-1"      # Location
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Stock Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Product Name is mandatory and must be unique per organization.",
+            "3. If product doesn't exist, it will be created automatically.",
+            "4. Quantity must be a non-negative number.",
+            "5. Unit Price and GST Rate should be numbers.",
+            "6. Reorder Level should be an integer.",
+            "7. Location is optional.",
+            "8. Do not modify the header row.",
+            "9. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
         excel_buffer = io.BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
-        return excel_buffer.getvalue()
-    
+        
+        logger.info("Stock Excel template generated successfully")
+        return excel_buffer
+
     @staticmethod
-    def export_data_to_excel(data: List[Dict[str, Any]], columns: List[Dict[str, Any]], filename: str) -> bytes:
-        """
-        Export data to Excel with formatting
-        """
+    def export_stock(stock_data: List[Dict]) -> io.BytesIO:
+        """Export stock data to Excel with styling"""
         wb = Workbook()
         ws = wb.active
-        ws.title = "Data"
-        
-        # Header style
+        ws.title = "Stock Export"
+
+        # Define styles (same as template)
         header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        header_alignment = Alignment(horizontal="center", vertical="center")
-        
-        # Add headers
-        for col_idx, col_info in enumerate(columns, 1):
-            cell = ws.cell(row=1, column=col_idx, value=col_info["name"])
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers in the new order
+        headers = [
+            "Product Name", "Quantity", "Unit", "HSN Code", "Part Number",
+            "Unit Price", "GST Rate", "Reorder Level", "Location"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = header_alignment
-            
-            # Set column width
-            column_letter = chr(64 + col_idx)
-            ws.column_dimensions[column_letter].width = col_info.get("width", 15)
-        
-        # Add data rows
-        for row_idx, record in enumerate(data, 2):
-            for col_idx, col_info in enumerate(columns, 1):
-                field_name = col_info.get("field", col_info["name"].lower().replace(" ", "_"))
-                value = record.get(field_name, "")
-                ws.cell(row=row_idx, column=col_idx, value=value)
-        
-        # Save to bytes
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data in the new order
+        for row_idx, item in enumerate(stock_data, 2):
+            row_data = [
+                item.get("product_name"),
+                item.get("quantity"),
+                item.get("unit"),
+                item.get("hsn_code"),
+                item.get("part_number"),
+                item.get("unit_price"),
+                item.get("gst_rate"),
+                item.get("reorder_level"),
+                item.get("location")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
         excel_buffer = io.BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
-        return excel_buffer.getvalue()
+        
+        logger.info(f"Stock data exported successfully: {len(stock_data)} records")
+        return excel_buffer
 
-class ProductExcelService:
-    """Excel service specifically for Products"""
-    
-    COLUMNS = [
-        {"name": "Product Name", "field": "product_name", "example": "Steel Bolt M8x50", "width": 20},
-        {"name": "HSN Code", "field": "hsn_code", "example": "73181590", "width": 12},
-        {"name": "Part Number", "field": "part_number", "example": "SB-M8-50", "width": 15},
-        {"name": "Unit", "field": "unit", "example": "PCS", "width": 10},
-        {"name": "Unit Price", "field": "unit_price", "example": "25.50", "width": 12},
-        {"name": "GST Rate", "field": "gst_rate", "example": "18.0", "width": 12},
-        {"name": "Is GST Inclusive", "field": "is_gst_inclusive", "example": "FALSE", "width": 15},
-        {"name": "Reorder Level", "field": "reorder_level", "example": "50", "width": 15},
-        {"name": "Description", "field": "description", "example": "High quality steel bolt", "width": 25},
-        {"name": "Is Manufactured", "field": "is_manufactured", "example": "FALSE", "width": 15},
-        {"name": "Initial Quantity", "field": "initial_quantity", "example": "100", "width": 15},
-        {"name": "Initial Location", "field": "initial_location", "example": "Warehouse A", "width": 15},
+class VendorExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "Name",
+        "Contact Number",
+        "Email",
+        "Address Line 1",
+        "Address Line 2",
+        "City",
+        "State",
+        "Pin Code",
+        "State Code",
+        "GST Number",
+        "PAN Number"
     ]
-    
-    REQUIRED_COLUMNS = ["Product Name", "Unit", "Unit Price"]
-    
-    @staticmethod
-    def create_template() -> bytes:
-        return ExcelService.create_template_excel(ProductExcelService.COLUMNS, "products_template.xlsx")
-    
-    @staticmethod
-    def export_products(products: List[Dict[str, Any]]) -> bytes:
-        return ExcelService.export_data_to_excel(products, ProductExcelService.COLUMNS, "products_export.xlsx")
 
-class VendorExcelService:
-    """Excel service specifically for Vendors"""
-    
-    COLUMNS = [
-        {"name": "Name", "field": "name", "example": "ABC Suppliers Pvt Ltd", "width": 25},
-        {"name": "Contact Number", "field": "contact_number", "example": "+91 9876543210", "width": 18},
-        {"name": "Email", "field": "email", "example": "contact@abcsuppliers.com", "width": 25},
-        {"name": "Address Line 1", "field": "address1", "example": "123 Industrial Area", "width": 25},
-        {"name": "Address Line 2", "field": "address2", "example": "Sector 5", "width": 20},
-        {"name": "City", "field": "city", "example": "Mumbai", "width": 15},
-        {"name": "State", "field": "state", "example": "Maharashtra", "width": 15},
-        {"name": "Pin Code", "field": "pin_code", "example": "400001", "width": 12},
-        {"name": "State Code", "field": "state_code", "example": "27", "width": 12},
-        {"name": "GST Number", "field": "gst_number", "example": "27ABCCS1234A1Z5", "width": 18},
-        {"name": "PAN Number", "field": "pan_number", "example": "ABCCS1234A", "width": 15},
-    ]
-    
-    REQUIRED_COLUMNS = ["Name", "Contact Number", "Address Line 1", "City", "State", "Pin Code", "State Code"]
-    
     @staticmethod
-    def create_template() -> bytes:
-        return ExcelService.create_template_excel(VendorExcelService.COLUMNS, "vendors_template.xlsx")
-    
-    @staticmethod
-    def export_vendors(vendors: List[Dict[str, Any]]) -> bytes:
-        return ExcelService.export_data_to_excel(vendors, VendorExcelService.COLUMNS, "vendors_export.xlsx")
+    def create_template() -> io.BytesIO:
+        """Create Excel template for vendor import with styling and sample data"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Vendor Import Template"
 
-class CustomerExcelService:
-    """Excel service specifically for Customers"""
-    
-    COLUMNS = [
-        {"name": "Name", "field": "name", "example": "XYZ Manufacturing Ltd", "width": 25},
-        {"name": "Contact Number", "field": "contact_number", "example": "+91 9876543210", "width": 18},
-        {"name": "Email", "field": "email", "example": "orders@xyzmanuf.com", "width": 25},
-        {"name": "Address Line 1", "field": "address1", "example": "456 Business Park", "width": 25},
-        {"name": "Address Line 2", "field": "address2", "example": "Phase 2", "width": 20},
-        {"name": "City", "field": "city", "example": "Delhi", "width": 15},
-        {"name": "State", "field": "state", "example": "Delhi", "width": 15},
-        {"name": "Pin Code", "field": "pin_code", "example": "110001", "width": 12},
-        {"name": "State Code", "field": "state_code", "example": "07", "width": 12},
-        {"name": "GST Number", "field": "gst_number", "example": "07XYZCS1234B1Z6", "width": 18},
-        {"name": "PAN Number", "field": "pan_number", "example": "XYZCS1234B", "width": 15},
-    ]
-    
-    REQUIRED_COLUMNS = ["Name", "Contact Number", "Address Line 1", "City", "State", "Pin Code", "State Code"]
-    
-    @staticmethod
-    def create_template() -> bytes:
-        return ExcelService.create_template_excel(CustomerExcelService.COLUMNS, "customers_template.xlsx")
-    
-    @staticmethod
-    def export_customers(customers: List[Dict[str, Any]]) -> bytes:
-        return ExcelService.export_data_to_excel(customers, CustomerExcelService.COLUMNS, "customers_export.xlsx")
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
 
-class StockExcelService:
-    """Excel service specifically for Stock/Inventory"""
-    
-    COLUMNS = [
-        {"name": "Product Name", "field": "product_name", "example": "Steel Bolt M8x50", "width": 25},
-        {"name": "Quantity", "field": "quantity", "example": "100", "width": 12},
-        {"name": "Unit", "field": "unit", "example": "PCS", "width": 10},
-        {"name": "HSN Code", "field": "hsn_code", "example": "73181590", "width": 12},
-        {"name": "Part Number", "field": "part_number", "example": "SB-M8-50", "width": 15},
-        {"name": "Unit Price", "field": "unit_price", "example": "25.50", "width": 12},
-        {"name": "GST Rate", "field": "gst_rate", "example": "18.0", "width": 12},
-        {"name": "Reorder Level", "field": "reorder_level", "example": "50", "width": 15},
-        {"name": "Location", "field": "location", "example": "Warehouse A-1", "width": 18},
+        # Add headers
+        headers = VendorExcelService.REQUIRED_COLUMNS
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data
+        sample_data = [
+            "Test Vendor Inc",     # Name
+            "1234567890",          # Contact Number
+            "test@vendor.com",     # Email
+            "123 Vendor Street",   # Address Line 1
+            "Suite 456",           # Address Line 2
+            "Vendor City",         # City
+            "Vendor State",        # State
+            "123456",              # Pin Code
+            "27",                  # State Code
+            "27AACFV1234D1Z5",     # GST Number
+            "AACFV1234D"           # PAN Number
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Vendor Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Name and Contact Number are mandatory.",
+            "3. Email, Address Line 2, GST Number, and PAN Number are optional.",
+            "4. Pin Code and State Code must be valid.",
+            "5. If vendor name exists, it will be updated; otherwise, created.",
+            "6. Do not modify the header row.",
+            "7. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info("Vendor Excel template generated successfully")
+        return excel_buffer
+
+    @staticmethod
+    def export_vendors(vendors_data: List[Dict]) -> io.BytesIO:
+        """Export vendors data to Excel with styling"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Vendors Export"
+
+        # Define styles (same as template)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = [
+            "Name", "Contact Number", "Email", "Address Line 1", "Address Line 2",
+            "City", "State", "Pin Code", "State Code", "GST Number", "PAN Number"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data
+        for row_idx, item in enumerate(vendors_data, 2):
+            row_data = [
+                item.get("name"),
+                item.get("contact_number"),
+                item.get("email"),
+                item.get("address1"),
+                item.get("address2"),
+                item.get("city"),
+                item.get("state"),
+                item.get("pin_code"),
+                item.get("state_code"),
+                item.get("gst_number"),
+                item.get("pan_number")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info(f"Vendors data exported successfully: {len(vendors_data)} records")
+        return excel_buffer
+
+class CustomerExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "Name",
+        "Contact Number",
+        "Email",
+        "Address Line 1",
+        "Address Line 2",
+        "City",
+        "State",
+        "Pin Code",
+        "State Code",
+        "GST Number",
+        "PAN Number"
     ]
-    
-    REQUIRED_COLUMNS = ["Product Name", "Unit", "Quantity"]
-    
+
     @staticmethod
-    def create_template() -> bytes:
-        return ExcelService.create_template_excel(StockExcelService.COLUMNS, "stock_template.xlsx")
-    
+    def create_template() -> io.BytesIO:
+        """Create Excel template for customer import with styling and sample data"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Customer Import Template"
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = CustomerExcelService.REQUIRED_COLUMNS
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data
+        sample_data = [
+            "Test Customer LLC",   # Name
+            "9876543210",          # Contact Number
+            "test@customer.com",   # Email
+            "456 Customer Ave",    # Address Line 1
+            "Apt 789",             # Address Line 2
+            "Customer City",       # City
+            "Customer State",      # State
+            "654321",              # Pin Code
+            "29",                  # State Code
+            "29AAACC1234E1Z7",     # GST Number
+            "AAACC1234E"           # PAN Number
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Customer Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Name and Contact Number are mandatory.",
+            "3. Email, Address Line 2, GST Number, and PAN Number are optional.",
+            "4. Pin Code and State Code must be valid.",
+            "5. If customer name exists, it will be updated; otherwise, created.",
+            "6. Do not modify the header row.",
+            "7. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info("Customer Excel template generated successfully")
+        return excel_buffer
+
     @staticmethod
-    def export_stock(stock_items: List[Dict[str, Any]]) -> bytes:
-        return ExcelService.export_data_to_excel(stock_items, StockExcelService.COLUMNS, "stock_export.xlsx")
+    def export_customers(customers_data: List[Dict]) -> io.BytesIO:
+        """Export customers data to Excel with styling"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Customers Export"
+
+        # Define styles (same as template)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = [
+            "Name", "Contact Number", "Email", "Address Line 1", "Address Line 2",
+            "City", "State", "Pin Code", "State Code", "GST Number", "PAN Number"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data
+        for row_idx, item in enumerate(customers_data, 2):
+            row_data = [
+                item.get("name"),
+                item.get("contact_number"),
+                item.get("email"),
+                item.get("address1"),
+                item.get("address2"),
+                item.get("city"),
+                item.get("state"),
+                item.get("pin_code"),
+                item.get("state_code"),
+                item.get("gst_number"),
+                item.get("pan_number")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info(f"Customers data exported successfully: {len(customers_data)} records")
+        return excel_buffer
+
+class ProductExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "Product Name",
+        "HSN Code",
+        "Part Number",
+        "Unit",
+        "Unit Price",
+        "GST Rate",
+        "Is GST Inclusive",
+        "Reorder Level",
+        "Description",
+        "Is Manufactured"
+    ]
+
+    @staticmethod
+    def create_template() -> io.BytesIO:
+        """Create Excel template for product import with styling and sample data"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Product Import Template"
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers (including optional initial stock columns)
+        headers = ProductExcelService.REQUIRED_COLUMNS + ["Initial Quantity", "Initial Location"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data
+        sample_data = [
+            "Test Product",        # Product Name
+            "123456",              # HSN Code
+            "TP-001",              # Part Number
+            "PCS",                 # Unit
+            100.0,                 # Unit Price
+            18.0,                  # GST Rate
+            "FALSE",               # Is GST Inclusive
+            10,                    # Reorder Level
+            "Test description",    # Description
+            "FALSE",               # Is Manufactured
+            50,                    # Initial Quantity (optional)
+            "Warehouse A"          # Initial Location (optional)
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Product Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Product Name and Unit are mandatory.",
+            "3. HSN Code, Part Number, Description are optional but recommended.",
+            "4. Unit Price, GST Rate, Reorder Level should be numbers.",
+            "5. Is GST Inclusive and Is Manufactured should be TRUE/FALSE or YES/NO.",
+            "6. Initial Quantity and Initial Location are optional for initial stock setup.",
+            "7. If product name exists, it will be updated; otherwise, created.",
+            "8. Do not modify the header row.",
+            "9. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info("Product Excel template generated successfully")
+        return excel_buffer
+
+    @staticmethod
+    def export_products(products_data: List[Dict]) -> io.BytesIO:
+        """Export products data to Excel with styling"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Products Export"
+
+        # Define styles (same as template)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = [
+            "Product Name", "HSN Code", "Part Number", "Unit",
+            "Unit Price", "GST Rate", "Is GST Inclusive", "Reorder Level",
+            "Description", "Is Manufactured"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data
+        for row_idx, item in enumerate(products_data, 2):
+            row_data = [
+                item.get("product_name"),
+                item.get("hsn_code"),
+                item.get("part_number"),
+                item.get("unit"),
+                item.get("unit_price"),
+                item.get("gst_rate"),
+                item.get("is_gst_inclusive"),
+                item.get("reorder_level"),
+                item.get("description"),
+                item.get("is_manufactured")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info(f"Products data exported successfully: {len(products_data)} records")
+        return excel_buffer

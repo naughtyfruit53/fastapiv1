@@ -92,7 +92,7 @@ app.include_router(companies.router, prefix=f"{config_settings.API_V1_STR}/compa
 app.include_router(vendors.router, prefix=f"{config_settings.API_V1_STR}/vendors", tags=["vendors"])
 app.include_router(customers.router, prefix=f"{config_settings.API_V1_STR}/customers", tags=["customers"])
 app.include_router(products.router, prefix=f"{config_settings.API_V1_STR}/products", tags=["products"])
-app.include_router(stock.router, prefix=f"{config_settings.API_V1_STR}/stock", tags=["stock"])
+app.include_router(stock.router, prefix="/api/v1/stock", tags=["stock"])  # Updated to match frontend call path
 app.include_router(vouchers_router, prefix=f"{config_settings.API_V1_STR}/vouchers", tags=["vouchers"])
 app.include_router(reports.router, prefix=f"{config_settings.API_V1_STR}/reports", tags=["reports"])
 app.include_router(settings.router, prefix=f"{config_settings.API_V1_STR}/settings", tags=["settings"])
