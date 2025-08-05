@@ -462,7 +462,7 @@ export const reportsService = {
 };
 
 export const organizationService = {
-  createLicense: async (data: { organization_name: string; superadmin_email: string }) => {
+  createLicense: async (data: any) => {
     try {
       const response = await api.post('/organizations/license/create', data);
       return response.data;
@@ -566,6 +566,58 @@ export const passwordService = {
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to reset password');
+    }
+  },
+};
+
+export const userService = {
+  // Organization user management (for org admins)
+  getOrganizationUsers: async (params?: any) => {
+    try {
+      const response = await api.get('/users/', { params });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to get organization users');
+    }
+  },
+  createUser: async (data: any) => {
+    try {
+      const response = await api.post('/users/', data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to create user');
+    }
+  },
+  updateUser: async (id: number, data: any) => {
+    try {
+      const response = await api.put(`/users/${id}`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to update user');
+    }
+  },
+  deleteUser: async (id: number) => {
+    try {
+      const response = await api.delete(`/users/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to delete user');
+    }
+  },
+  resetUserPassword: async (userId: number) => {
+    try {
+      const response = await api.post(`/auth/reset/${userId}/password`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to reset user password');
+    }
+  },
+  toggleUserStatus: async (userId: number, isActive: boolean) => {
+    try {
+      const response = await api.put(`/users/${userId}`, { is_active: isActive });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to update user status');
     }
   },
 };

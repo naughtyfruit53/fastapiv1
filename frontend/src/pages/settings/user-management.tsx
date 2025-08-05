@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useRouter } from 'next/router';
+import { userService } from '../../services/authService';
 
 interface User {
   id: number;
@@ -82,21 +83,14 @@ const UserManagement: React.FC = () => {
     }
   });
 
-  // Mock API calls - replace with actual service calls
+  // Real API calls using userService
   const { data: users, isLoading } = useQuery(
     'organization-users',
-    async () => {
-      // Replace with actual API call
-      return [];
-    }
+    userService.getOrganizationUsers
   );
 
   const createUserMutation = useMutation(
-    async (data: any) => {
-      // Replace with actual API call
-      console.log('Creating user:', data);
-      return { message: 'User created successfully' };
-    },
+    userService.createUser,
     {
       onSuccess: () => {
         queryClient.invalidateQueries('organization-users');
@@ -107,11 +101,7 @@ const UserManagement: React.FC = () => {
   );
 
   const updateUserMutation = useMutation(
-    async ({ userId, data }: { userId: number; data: any }) => {
-      // Replace with actual API call
-      console.log('Updating user:', userId, data);
-      return { message: 'User updated successfully' };
-    },
+    ({ userId, data }: { userId: number; data: any }) => userService.updateUser(userId, data),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('organization-users');
@@ -124,9 +114,18 @@ const UserManagement: React.FC = () => {
 
   const userActionMutation = useMutation(
     async ({ userId, action }: { userId: number; action: string }) => {
-      // Replace with actual API call
-      console.log('User action:', userId, action);
-      return { message: `User ${action} successfully` };
+      switch (action) {
+        case 'reset':
+          return userService.resetUserPassword(userId);
+        case 'activate':
+          return userService.toggleUserStatus(userId, true);
+        case 'deactivate':
+          return userService.toggleUserStatus(userId, false);
+        case 'delete':
+          return userService.deleteUser(userId);
+        default:
+          throw new Error('Unknown action');
+      }
     },
     {
       onSuccess: () => {
@@ -157,7 +156,16 @@ const UserManagement: React.FC = () => {
   };
 
   const handleCreateUser = () => {
-    createUserMutation.mutate(formData);
+    const userData = {
+      email: formData.email,
+      username: formData.username,
+      full_name: formData.full_name,
+      password: formData.password || 'TempPassword123!', // Generate temp password if not provided
+      role: formData.role,
+      department: formData.department,
+      designation: formData.designation,
+    };
+    createUserMutation.mutate(userData);
   };
 
   const handleEditUser = (user: User) => {
@@ -182,9 +190,21 @@ const UserManagement: React.FC = () => {
 
   const handleUpdateUser = () => {
     if (selectedUser) {
+      const userData = {
+        email: formData.email,
+        username: formData.username,
+        full_name: formData.full_name,
+        role: formData.role,
+        department: formData.department,
+        designation: formData.designation,
+      };
+      // Only include password if provided
+      if (formData.password) {
+        userData.password = formData.password;
+      }
       updateUserMutation.mutate({
         userId: selectedUser.id,
-        data: formData
+        data: userData
       });
     }
   };

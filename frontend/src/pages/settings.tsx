@@ -28,7 +28,9 @@ import axios from 'axios';
 export default function Settings() {
   const router = useRouter();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [factoryResetDialogOpen, setFactoryResetDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [factoryLoading, setFactoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -76,6 +78,39 @@ export default function Settings() {
       setResetDialogOpen(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFactoryReset = async () => {
+    setFactoryLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await axios.post(
+        `${API_BASE_URL}/api/v1/organizations/factory-default`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setSuccess(response.data.message);
+      setFactoryResetDialogOpen(false);
+      
+      // Refresh the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to perform factory reset');
+      setFactoryResetDialogOpen(false);
+    } finally {
+      setFactoryLoading(false);
     }
   };
 
@@ -184,8 +219,8 @@ export default function Settings() {
                 color="error"
                 startIcon={<DeleteSweep />}
                 onClick={() => setResetDialogOpen(true)}
-                disabled={loading}
-                sx={{ mt: 1 }}
+                disabled={loading || factoryLoading}
+                sx={{ mt: 1, mr: 2 }}
               >
                 {loading ? (
                   <CircularProgress size={20} color="inherit" />
@@ -194,12 +229,36 @@ export default function Settings() {
                 )}
               </Button>
 
+              {/* Factory Default Button for Organization Admins */}
+              {isOrgAdmin && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<Warning />}
+                  onClick={() => setFactoryResetDialogOpen(true)}
+                  disabled={loading || factoryLoading}
+                  sx={{ mt: 1 }}
+                >
+                  {factoryLoading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    'Factory Default'
+                  )}
+                </Button>
+              )}
+
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                 {isSuperAdmin 
                   ? 'As super admin, this will reset all organization data'
-                  : 'This will reset all data for your organization only'
+                  : 'Reset data: removes all business data but keeps organization settings'
                 }
               </Typography>
+
+              {isOrgAdmin && (
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                  Factory Default: Resets organization to initial state with default settings
+                </Typography>
+              )}
             </Paper>
           </Grid>
         )}
@@ -282,6 +341,53 @@ export default function Settings() {
             startIcon={loading ? <CircularProgress size={16} /> : <DeleteSweep />}
           >
             {loading ? 'Resetting...' : 'Reset Data'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Factory Default Confirmation Dialog */}
+      <Dialog
+        open={factoryResetDialogOpen}
+        onClose={() => setFactoryResetDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+          <Warning sx={{ mr: 1, color: 'warning.main' }} />
+          Confirm Factory Default Reset
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to perform a factory default reset? 
+            This action will permanently restore your organization to its initial state:
+          </DialogContentText>
+          <Box component="ul" sx={{ mt: 2, mb: 2 }}>
+            <li>All business data will be deleted (same as data reset)</li>
+            <li>Organization settings will be reset to defaults</li>
+            <li>Business type will be set to "Other"</li>
+            <li>Timezone will be set to "Asia/Kolkata"</li>
+            <li>Currency will be set to "INR"</li>
+            <li>Company details status will be reset</li>
+          </Box>
+          <DialogContentText color="warning.main">
+            <strong>This action cannot be undone and will reset both data and settings!</strong>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setFactoryResetDialogOpen(false)} 
+            disabled={factoryLoading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleFactoryReset} 
+            color="warning" 
+            variant="contained"
+            disabled={factoryLoading}
+            startIcon={factoryLoading ? <CircularProgress size={16} /> : <Warning />}
+          >
+            {factoryLoading ? 'Resetting to Defaults...' : 'Factory Default Reset'}
           </Button>
         </DialogActions>
       </Dialog>

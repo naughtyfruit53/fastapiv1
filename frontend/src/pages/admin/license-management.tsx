@@ -18,11 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Alert,
-  Divider,
-  FormControlLabel,
-  Switch
+  Divider
 } from '@mui/material';
 import {
   Add,
@@ -38,6 +35,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useRouter } from 'next/router';
 import { organizationService } from '../../services/authService';
+import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
 
 interface Organization {
   id: number;
@@ -59,17 +57,6 @@ const LicenseManagement: React.FC = () => {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'hold' | 'activate' | 'reset' | null>(null);
-  const [formData, setFormData] = useState({
-    organization_name: '',
-    admin_password: '',
-    primary_email: '',
-    primary_phone: '',
-    business_type: 'manufacturing',
-    address1: '',
-    city: '',
-    state: '',
-    pin_code: ''
-  });
 
   // API calls using real service
   const { data: organizations, isLoading } = useQuery(
@@ -83,7 +70,6 @@ const LicenseManagement: React.FC = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('organizations');
         setCreateDialogOpen(false);
-        resetForm();
       }
     }
   );
@@ -113,25 +99,12 @@ const LicenseManagement: React.FC = () => {
   );
 
   const resetForm = () => {
-    setFormData({
-      organization_name: '',
-      admin_password: '',
-      primary_email: '',
-      primary_phone: '',
-      business_type: 'manufacturing',
-      address1: '',
-      city: '',
-      state: '',
-      pin_code: ''
-    });
+    // No longer needed as the modal handles its own form reset
   };
 
-  const handleCreateLicense = () => {
-    const licenseData = {
-      organization_name: formData.organization_name,
-      superadmin_email: formData.primary_email
-    };
-    createLicenseMutation.mutate(licenseData);
+  const handleCreateLicense = (result: any) => {
+    // License creation is handled by the modal
+    queryClient.invalidateQueries('organizations');
   };
 
   const handleAction = (org: Organization, action: 'hold' | 'activate' | 'reset') => {
@@ -343,98 +316,12 @@ const LicenseManagement: React.FC = () => {
         </Table>
       </TableContainer>
 
-      {/* Create License Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Organization License</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Organization Name"
-                value={formData.organization_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Admin Password"
-                type="password"
-                value={formData.admin_password}
-                onChange={(e) => setFormData(prev => ({ ...prev, admin_password: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Primary Email"
-                type="email"
-                value={formData.primary_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, primary_email: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Primary Phone"
-                value={formData.primary_phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, primary_phone: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address"
-                value={formData.address1}
-                onChange={(e) => setFormData(prev => ({ ...prev, address1: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="City"
-                value={formData.city}
-                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="State"
-                value={formData.state}
-                onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="PIN Code"
-                value={formData.pin_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, pin_code: e.target.value }))}
-                required
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleCreateLicense} 
-            variant="contained"
-            disabled={createLicenseMutation.isLoading}
-          >
-            {createLicenseMutation.isLoading ? 'Creating...' : 'Create License'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Enhanced Create License Modal */}
+      <CreateOrganizationLicenseModal
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={handleCreateLicense}
+      />
 
       {/* Action Confirmation Dialog */}
       <Dialog open={actionDialogOpen} onClose={() => setActionDialogOpen(false)}>
