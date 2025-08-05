@@ -6,13 +6,14 @@ from sqlalchemy import and_
 from typing import List, Dict, Any, Optional
 from app.models.base import (
     Organization, User, Company, Product, Customer, Vendor, 
-    Stock, EmailNotification, PaymentTerm, OTPVerification, PlatformUser
+    Stock, EmailNotification, PaymentTerm, OTPVerification, PlatformUser, AuditLog
 )
 from app.core.audit import AuditLogger
 from app.schemas.reset import (
     DataResetRequest, DataResetResponse, OrganizationDataResetResponse,
     DataResetType, ResetScope
 )
+from app.schemas.base import UserRole
 from app.core.database import SessionLocal
 import logging
 
@@ -21,6 +22,84 @@ logger = logging.getLogger(__name__)
 
 class ResetService:
     """Service for handling data reset operations"""
+    
+    @staticmethod
+    def factory_reset_organization_data(db: Session, organization_id: int) -> Dict[str, Any]:
+        """
+        Simple factory reset for organization data (Organization Admin)
+        
+        Args:
+            db: Database session
+            organization_id: ID of the organization to reset
+            
+        Returns:
+            dict: Result with message and deleted counts
+        """
+        try:
+            result = {"message": "Organization data reset completed", "deleted": {}}
+            
+            # Delete in reverse dependency order to avoid foreign key constraints
+            
+            # Delete email notifications for this organization
+            deleted_notifications = db.query(EmailNotification).filter(
+                EmailNotification.organization_id == organization_id
+            ).delete()
+            result["deleted"]["email_notifications"] = deleted_notifications
+            
+            # Delete stock entries for this organization
+            deleted_stock = db.query(Stock).filter(
+                Stock.organization_id == organization_id
+            ).delete()
+            result["deleted"]["stock"] = deleted_stock
+            
+            # Delete payment terms for this organization
+            deleted_payment_terms = db.query(PaymentTerm).filter(
+                PaymentTerm.organization_id == organization_id
+            ).delete()
+            result["deleted"]["payment_terms"] = deleted_payment_terms
+            
+            # Delete products for this organization
+            deleted_products = db.query(Product).filter(
+                Product.organization_id == organization_id
+            ).delete()
+            result["deleted"]["products"] = deleted_products
+            
+            # Delete customers for this organization
+            deleted_customers = db.query(Customer).filter(
+                Customer.organization_id == organization_id
+            ).delete()
+            result["deleted"]["customers"] = deleted_customers
+            
+            # Delete vendors for this organization
+            deleted_vendors = db.query(Vendor).filter(
+                Vendor.organization_id == organization_id
+            ).delete()
+            result["deleted"]["vendors"] = deleted_vendors
+            
+            # Delete companies for this organization
+            deleted_companies = db.query(Company).filter(
+                Company.organization_id == organization_id
+            ).delete()
+            result["deleted"]["companies"] = deleted_companies
+            
+            # Delete non-admin users for this organization (keep org admin)
+            deleted_users = db.query(User).filter(
+                and_(
+                    User.organization_id == organization_id,
+                    User.role != UserRole.ORG_ADMIN
+                )
+            ).delete()
+            result["deleted"]["users"] = deleted_users
+            
+            db.commit()
+            logger.info(f"Factory reset completed for organization {organization_id}")
+            
+            return result
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error during factory reset for organization {organization_id}: {str(e)}")
+            raise e
     
     @staticmethod
     def reset_organization_data(

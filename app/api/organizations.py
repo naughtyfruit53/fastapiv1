@@ -5,7 +5,7 @@ Organization management API endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.tenant import require_organization, TenantContext
@@ -20,11 +20,68 @@ import logging
 import secrets
 import string
 import re
+import requests
 
 from app.services.email_service import email_service  # Import for sending email
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Import pincode lookup logic from pincode module
+from app.api.pincode import STATE_CODE_MAP
+
+async def lookup_pincode_data(pin_code: str) -> Dict[str, str]:
+    """
+    Reusable pincode lookup function that uses the same logic as the pincode API
+    """
+    if not pin_code.isdigit() or len(pin_code) != 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid PIN code format. PIN code must be 6 digits."
+        )
+    
+    try:
+        response = requests.get(f"https://api.postalpincode.in/pincode/{pin_code}")
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or data[0]['Status'] != "Success":
+            raise HTTPException(
+                status_code=404,
+                detail=f"PIN code {pin_code} not found. Please enter city and state manually."
+            )
+        
+        post_office = data[0]['PostOffice'][0]
+        city = post_office['District']
+        state = post_office['State']
+        state_code = STATE_CODE_MAP.get(state, "00")
+        
+        return {
+            "city": city,
+            "state": state,
+            "state_code": state_code
+        }
+    
+    except requests.RequestException as e:
+        logger.error(f"Error fetching PIN code data: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail="PIN code lookup service is currently unavailable. Please try again later or enter details manually."
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in PIN code lookup: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred during PIN code lookup."
+        )
+
+@router.get("/pincode-lookup/{pin_code}")
+async def lookup_pincode_for_license(pin_code: str) -> Dict[str, str]:
+    """
+    Lookup city, state, and state_code by PIN code for license creation form
+    Uses the same logic as the Company Details module
+    """
+    return await lookup_pincode_data(pin_code)
 
 @router.post("/license/create", response_model=OrganizationLicenseResponse, status_code=status.HTTP_201_CREATED)
 async def create_organization_license(
@@ -41,6 +98,23 @@ async def create_organization_license(
         )
     
     try:
+        # Auto-populate city, state, and state_code from pincode if provided
+        city = license_data.city
+        state = license_data.state
+        state_code = license_data.state_code
+        
+        if license_data.pin_code and not (city and state):
+            try:
+                pincode_data = await lookup_pincode_data(license_data.pin_code)
+                city = city or pincode_data["city"]
+                state = state or pincode_data["state"] 
+                state_code = state_code or pincode_data["state_code"]
+                logger.info(f"Auto-populated from pincode {license_data.pin_code}: city={city}, state={state}, state_code={state_code}")
+            except HTTPException as e:
+                # If pincode lookup fails, continue without auto-population
+                logger.warning(f"Pincode lookup failed for {license_data.pin_code}: {e.detail}")
+                pass
+        
         # Generate subdomain from organization name
         subdomain_base = re.sub(r'[^a-zA-Z0-9]', '', license_data.organization_name.lower())
         subdomain_base = subdomain_base[:15] if len(subdomain_base) > 15 else subdomain_base
@@ -81,18 +155,18 @@ async def create_organization_license(
                 detail="Email already exists in the system"
             )
         
-        # Create organization with minimal required details
+        # Create organization with enhanced details
         org = Organization(
             name=license_data.organization_name,
             subdomain=subdomain,
             business_type="Other",
             primary_email=license_data.superadmin_email,
-            primary_phone=license_data.primary_phone or "+91-0000000000",  # Placeholder
-            address1=license_data.address or "To be updated",  # Placeholder
-            city=license_data.city or "To be updated",  # Placeholder
-            state=license_data.state or "To be updated",  # Placeholder
-            pin_code=license_data.pin_code or "000000",  # Placeholder
-            gst_number=license_data.gst_number,
+            primary_phone=license_data.primary_phone or "+91-0000000000",  # Placeholder if not provided
+            address1=license_data.address or "To be updated",  # Placeholder if not provided
+            city=city or "To be updated",  # Use auto-populated or provided value
+            state=state or "To be updated",  # Use auto-populated or provided value
+            pin_code=license_data.pin_code or "000000",  # Use provided or placeholder
+            gst_number=license_data.gst_number,  # Optional as per requirements
             status="trial",
             plan_type="trial",
             max_users=5,
@@ -112,7 +186,7 @@ async def create_organization_license(
             full_name="Administrator",
             role=UserRole.ORG_ADMIN,
             is_active=True,
-            must_change_password=must_change_password  # Force password change on first login
+            must_change_password=must_change_password  # Force password change on first login if auto-generated
         )
         
         db.add(admin_user)
@@ -464,7 +538,7 @@ async def reset_organization_data(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="Organization not found"
                     )
-                result = ResetService.reset_organization_data(db, organization_id)
+                result = ResetService.factory_reset_organization_data(db, organization_id)
                 logger.info(f"Super admin {current_user.email} reset data for organization {org.name}")
                 return {
                     "message": f"Data reset successfully for organization: {org.name}",
@@ -481,7 +555,7 @@ async def reset_organization_data(
         elif current_user.role in [UserRole.ORG_ADMIN] and current_user.organization_id:
             # Organization admin can reset their organization data only
             org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
-            result = ResetService.reset_organization_data(db, current_user.organization_id)
+            result = ResetService.factory_reset_organization_data(db, current_user.organization_id)
             logger.info(f"Org admin {current_user.email} reset data for their organization {org.name}")
             return {
                 "message": f"Organization data has been reset successfully for: {org.name}", 
@@ -499,4 +573,76 @@ async def reset_organization_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset data. Please try again."
+        )
+
+@router.post("/factory-default")
+async def factory_default_organization(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Factory Default: Reset organization to default state (Organization Admin only)"""
+    # Only organization admins can perform factory default
+    if current_user.role not in [UserRole.ORG_ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization administrators can perform factory default reset"
+        )
+    
+    if not current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any organization"
+        )
+    
+    try:
+        from app.services.reset_service import ResetService
+        
+        org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+        if not org:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
+        
+        # Reset organization data to factory defaults
+        result = ResetService.factory_reset_organization_data(db, current_user.organization_id)
+        
+        # Reset organization settings to defaults
+        org.business_type = "Other"
+        org.industry = None
+        org.website = None
+        org.description = None
+        org.timezone = "Asia/Kolkata"
+        org.currency = "INR"
+        org.date_format = "DD/MM/YYYY"
+        org.financial_year_start = "04/01"
+        org.company_details_completed = False
+        org.features = {}
+        
+        db.commit()
+        db.refresh(org)
+        
+        logger.info(f"Org admin {current_user.email} performed factory default reset for organization {org.name}")
+        
+        return {
+            "message": f"Organization '{org.name}' has been reset to factory defaults successfully",
+            "organization_name": org.name,
+            "details": result.get("deleted", {}),
+            "reset_settings": {
+                "business_type": "Other",
+                "timezone": "Asia/Kolkata", 
+                "currency": "INR",
+                "date_format": "DD/MM/YYYY",
+                "financial_year_start": "04/01"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error performing factory default reset: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to perform factory default reset. Please try again."
         )

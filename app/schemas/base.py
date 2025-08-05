@@ -106,12 +106,40 @@ class OrganizationInDB(OrganizationBase):
 class OrganizationLicenseCreate(BaseModel):
     organization_name: str
     superadmin_email: EmailStr
+    primary_phone: Optional[str] = None
+    address: Optional[str] = None
+    pin_code: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    state_code: Optional[str] = None  # Auto-filled from pincode lookup
+    gst_number: Optional[str] = None  # Optional as per requirements
+    admin_password: Optional[str] = None  # Optional - if not provided, system generates one
     
     @validator('organization_name')
     def validate_organization_name(cls, v):
         if len(v.strip()) < 3:
             raise ValueError('Organization name must be at least 3 characters long')
         return v.strip()
+    
+    @validator('pin_code')
+    def validate_pin_code(cls, v):
+        if v is not None and (not v.isdigit() or len(v) != 6):
+            raise ValueError('Pin code must be exactly 6 digits')
+        return v
+    
+    @validator('primary_phone')
+    def validate_phone(cls, v):
+        if v is not None:
+            clean_number = ''.join(filter(str.isdigit, v))
+            if len(clean_number) < 10:
+                raise ValueError('Phone number must contain at least 10 digits')
+        return v
+    
+    @validator('gst_number')
+    def validate_gst_number(cls, v):
+        if v is not None and v.strip() and len(v.strip()) != 15:
+            raise ValueError('GST number must be exactly 15 characters')
+        return v.strip() if v else None
 
 class OrganizationLicenseResponse(BaseModel):
     message: str
@@ -120,6 +148,7 @@ class OrganizationLicenseResponse(BaseModel):
     superadmin_email: str
     subdomain: str
     temp_password: str
+    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again."
 
 # Password change and reset schemas
 class PasswordChangeRequest(BaseModel):
@@ -145,6 +174,7 @@ class PasswordResetResponse(BaseModel):
     email_sent: bool
     email_error: Optional[str] = None
     must_change_password: bool = True
+    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again."
 
 class PasswordChangeResponse(BaseModel):
     message: str
