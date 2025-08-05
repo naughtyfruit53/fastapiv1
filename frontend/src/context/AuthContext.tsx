@@ -1,21 +1,14 @@
-// fastapi_migration/frontend/src/context/AuthContext.tsx
+// Revised: v1/frontend/src/context/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import { authService } from '../services/authService';
-
-interface User {
-  id: number;
-  email: string;
-  role: 'super_admin' | 'org_admin' | 'user';
-  org_id?: number;
-  must_change_password?: boolean;
-}
+import { User } from '../types/user.types';  // Import User type
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,45 +19,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const fetchUser = async () => {
+    try {
+      const userData = await authService.getCurrentUser();
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role,
+        is_super_admin: userData.is_super_admin,
+        organization_id: userData.organization_id,
+        must_change_password: userData.must_change_password,
+      });
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      setUser(null);
+      localStorage.removeItem('token');
+      router.push('/login');
+    }
+  };
+
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const userData = await authService.getCurrentUser();
-          setUser({
-            id: userData.id,
-            email: userData.email,
-            role: userData.role,
-            org_id: userData.organization_id,
-            must_change_password: userData.must_change_password,
-          });
-        } catch (error) {
-          localStorage.removeItem('token');
-          router.push('/login');
-        }
-      }
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUser().finally(() => setLoading(false));
+    } else {
       setLoading(false);
-    };
-    checkAuth();
+    }
   }, [router]);
 
-  const login = (token: string) => {
+  const login = async (token: string) => {
     localStorage.setItem('token', token);
-    // Simplified for build - will implement JWT decoding later
-    setUser({
-      id: 1,
-      email: 'demo@example.com',
-      role: 'user',
-      org_id: 1,
-    });
+    await fetchUser();
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('orgId');
     setUser(null);
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   return (

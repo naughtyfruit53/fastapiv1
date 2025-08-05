@@ -1,3 +1,5 @@
+# Revised: v1/app/api/companies.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -35,10 +37,8 @@ async def get_current_company(
     """Get current organization's company details"""
     
     if current_user.is_super_admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Super admin must specify organization ID"
-        )
+        # For super admin, return None or a message
+        return None  # Or raise HTTPException if preferred
     
     org_id = require_current_organization_id()
     company = db.query(Company).filter(Company.organization_id == org_id).first()

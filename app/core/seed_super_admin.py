@@ -1,3 +1,5 @@
+# Revised: v1/app/core/seed_super_admin.py
+
 """
 Super Admin Seeding Logic
 
@@ -11,8 +13,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text
 from app.core.database import SessionLocal
+from app.models.base import Base, User
+from app.schemas.base import UserRole
 from app.core.security import get_password_hash
-from app.models.base import User
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +53,7 @@ def seed_super_admin(db: Session = None) -> None:
                 
         except OperationalError as e:
             if "no such column" in str(e):
-                logger.warning("Database schema appears to be outdated. The users table is missing organization_id or is_super_admin columns.")
+                logger.warning("Database schema appears to be outdated. The users table is missing organization_id or is_super_admin columns columns.")
                 logger.warning("Please run 'alembic upgrade head' to update the database schema before seeding super admin.")
                 logger.warning("Skipping super admin seeding for now.")
                 return
@@ -67,14 +70,13 @@ def seed_super_admin(db: Session = None) -> None:
         # Create the super admin user
         super_admin = User(
             email=super_admin_email,
-            username="super_admin",
+            username="superadmin",
             hashed_password=hashed_password,
-            full_name="Platform Super Administrator",
-            role="super_admin",
-            organization_id=None,  # Not tied to any organization
+            full_name="Super Admin",
+            role=UserRole.SUPER_ADMIN,
             is_super_admin=True,
             is_active=True,
-            must_change_password=True  # Force password change on first login
+            organization_id=None  # Platform level
         )
         
         db_session.add(super_admin)
@@ -149,3 +151,6 @@ def check_database_schema_updated(db: Session = None) -> bool:
     finally:
         if db is None:
             db_session.close()
+
+if __name__ == "__main__":
+    seed_super_admin()

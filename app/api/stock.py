@@ -1,3 +1,5 @@
+# Revised: v1/app/api/stock.py
+
 # Revised api/stock.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
@@ -31,11 +33,11 @@ async def get_stock(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get stock information with product details"""
-    query = db.query(Stock, Product).join(Product)
-    
-    # Apply tenant filtering for non-super-admin users
-    if not current_user.is_super_admin:
+    if current_user.is_super_admin:
+        query = db.query(Stock, Product).join(Product)
+    else:
         org_id = require_current_organization_id()
+        query = db.query(Stock, Product).join(Product)
         query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
     
     if product_id:
@@ -74,13 +76,15 @@ async def get_low_stock(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get products with low stock (below reorder level) with product details"""
-    query = db.query(Stock, Product).join(Product).filter(
-        Stock.quantity <= Product.reorder_level
-    )
-    
-    # Apply tenant filtering for non-super-admin users
-    if not current_user.is_super_admin:
+    if current_user.is_super_admin:
+        query = db.query(Stock, Product).join(Product).filter(
+            Stock.quantity <= Product.reorder_level
+        )
+    else:
         org_id = require_current_organization_id()
+        query = db.query(Stock, Product).join(Product).filter(
+            Stock.quantity <= Product.reorder_level
+        )
         query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
     
     stock_product_pairs = query.all()
@@ -243,7 +247,6 @@ async def adjust_stock(
                 detail="Product not found"
             )
         
-        # Create new stock entry with the adjustment
         previous_quantity = 0.0
         new_quantity = max(0, adjustment.quantity_change)
         

@@ -1,0 +1,15 @@
+<!-- New: v1/app/templates/email/factory_reset_otp.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Factory Reset OTP</title>
+</head>
+<body>
+    <p>Dear {{ user_name }},</p>
+    <p>You have requested a factory reset for your organization/app. Your one-time password (OTP) is:</p>
+    <h2>{{ otp }}</h2>
+    <p>This OTP will expire in 5 minutes. If you did not request this, please contact support immediately.</p>
+    <p>Best regards,<br>Your App Team</p>
+</body>
+</html>

@@ -1,6 +1,5 @@
-"""
-Reset schemas for password and data reset operations
-"""
+# Revised: v1/app/schemas/reset.py
+
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List, Dict, Any
 from enum import Enum

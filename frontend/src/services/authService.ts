@@ -1,74 +1,5 @@
 // frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
-import axios from 'axios';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add token to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Handle token expiration
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/';
-    }
-    
-    // Extract error message with proper handling for arrays and objects
-    let errorMessage = 'An unexpected error occurred';
-    
-    const detail = error.response?.data?.detail;
-    const message = error.response?.data?.message;
-    const status = error.response?.status;
-    
-    if (typeof detail === 'string' && detail) {
-      errorMessage = detail;
-    } else if (typeof message === 'string' && message) {
-      errorMessage = message;
-    } else if (Array.isArray(detail) && detail.length > 0) {
-      // Handle Pydantic validation errors (array of objects)
-      const messages = detail.map(err => err.msg || `${err.loc?.join(' -> ')}: ${err.type}`).filter(Boolean);
-      errorMessage = messages.length > 0 ? messages.join(', ') : 'Validation error';
-    } else if (detail && typeof detail === 'object') {
-      // Handle object error details
-      errorMessage = detail.error || detail.message || JSON.stringify(detail);
-    } else if (typeof error.message === 'string' && error.message && !error.message.includes('[object Object]')) {
-      errorMessage = error.message;
-    } else if (status === 422) {
-      errorMessage = 'Invalid request data. Please check your input and try again.';
-    } else if (status === 404) {
-      errorMessage = 'Service not found. Please check your connection.';
-    } else if (status >= 500) {
-      errorMessage = 'Server error. Please try again later or contact support.';
-    }
-    
-    console.error('API Error:', errorMessage, 'Status:', status);
-    return Promise.reject({
-      ...error,
-      userMessage: errorMessage,
-      status: error.response?.status
-    });
-  }
-);
+import api from '../lib/api';  // Use the api client
 
 export const authService = {
   login: async (username: string, password: string) => {
@@ -621,5 +552,3 @@ export const userService = {
     }
   },
 };
-
-export default api;

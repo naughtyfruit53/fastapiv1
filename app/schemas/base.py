@@ -1,3 +1,5 @@
+# Revised: v1/app/schemas/base.py
+
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -8,6 +10,18 @@ class UserRole(str, Enum):
     ORG_ADMIN = "org_admin"
     ADMIN = "admin"
     STANDARD_USER = "standard_user"
+
+    @property
+    def display_name(self):
+        if self == UserRole.SUPER_ADMIN:
+            return "App Super Admin"
+        elif self == UserRole.ORG_ADMIN:
+            return "Org Super Admin"
+        elif self == UserRole.ADMIN:
+            return "Admin"
+        elif self == UserRole.STANDARD_USER:
+            return "Standard User"
+        return self.value
 
 class PlatformUserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
@@ -112,7 +126,7 @@ class OrganizationLicenseCreate(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     state_code: Optional[str] = None  # Auto-filled from pincode lookup
-    gst_number: Optional[str] = None  # Optional as per requirements
+    gst_number: Optional[str] = None  # Optional as as per requirements
     admin_password: Optional[str] = None  # Optional - if not provided, system generates one
     
     @validator('organization_name')

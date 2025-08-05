@@ -1,3 +1,5 @@
+# Revised: v1/app/api/vouchers/purchase.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -36,8 +38,12 @@ async def get_purchase_vouchers_by_type(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get purchase vouchers filtered by type (problem statement requirement)"""
-    org_id = require_current_organization_id(current_user)
-    query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseVoucher), PurchaseVoucher, org_id, current_user)
+    if current_user.is_super_admin:
+        # Super admin can see all
+        query = db.query(PurchaseVoucher)
+    else:
+        org_id = require_current_organization_id(current_user)
+        query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseVoucher), PurchaseVoucher, org_id, current_user)
     query = query.filter(PurchaseVoucher.voucher_type == "purchase")
     
     if status:
@@ -58,8 +64,11 @@ async def get_purchase_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = require_current_organization_id(current_user)
-    query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseOrder), PurchaseOrder, org_id, current_user)
+    if current_user.is_super_admin:
+        query = db.query(PurchaseOrder)
+    else:
+        org_id = require_current_organization_id(current_user)
+        query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseOrder), PurchaseOrder, org_id, current_user)
     if status:
         query = query.filter(PurchaseOrder.status == status)
     if vendor_id:
@@ -72,7 +81,13 @@ async def create_purchase_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = require_current_organization_id(current_user)
+    if current_user.is_super_admin:
+        # Super admin must specify org_id in request
+        if not order.organization_id:
+            raise HTTPException(status_code=400, detail="Super admin must specify organization_id")
+        org_id = order.organization_id
+    else:
+        org_id = require_current_organization_id(current_user)
     # Validate vendor
     vendor = TenantQueryFilter.apply_organization_filter(
         db.query(Vendor), Vendor, org_id, current_user
@@ -165,8 +180,11 @@ async def get_goods_receipt_notes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = require_current_organization_id(current_user)
-    query = TenantQueryFilter.apply_organization_filter(db.query(GoodsReceiptNote), GoodsReceiptNote, org_id, current_user)
+    if current_user.is_super_admin:
+        query = db.query(GoodsReceiptNote)
+    else:
+        org_id = require_current_organization_id(current_user)
+        query = TenantQueryFilter.apply_organization_filter(db.query(GoodsReceiptNote), GoodsReceiptNote, org_id, current_user)
     if status:
         query = query.filter(GoodsReceiptNote.status == status)
     if vendor_id:
@@ -192,6 +210,7 @@ async def create_goods_receipt_note(
     db_grn = GoodsReceiptNote(**grn_data)
     db.add(db_grn)
     db.flush()
+    
     for item_data in grn.items:
         po_item = db.query(PurchaseOrderItem).filter(
             PurchaseOrderItem.id == item_data.po_item_id,
@@ -286,8 +305,11 @@ async def get_purchase_vouchers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = require_current_organization_id(current_user)
-    query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseVoucher), PurchaseVoucher, org_id, current_user)
+    if current_user.is_super_admin:
+        query = db.query(PurchaseVoucher)
+    else:
+        org_id = require_current_organization_id(current_user)
+        query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseVoucher), PurchaseVoucher, org_id, current_user)
     if status:
         query = query.filter(PurchaseVoucher.status == status)
     if vendor_id:
@@ -349,8 +371,11 @@ async def get_purchase_returns(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = require_current_organization_id(current_user)
-    query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseReturn), PurchaseReturn, org_id, current_user)
+    if current_user.is_super_admin:
+        query = db.query(PurchaseReturn)
+    else:
+        org_id = require_current_organization_id(current_user)
+        query = TenantQueryFilter.apply_organization_filter(db.query(PurchaseReturn), PurchaseReturn, org_id, current_user)
     if status:
         query = query.filter(PurchaseReturn.status == status)
     return query.offset(skip).limit(limit).all()

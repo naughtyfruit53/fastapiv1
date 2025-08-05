@@ -1,25 +1,33 @@
-// frontend/src/services/api.ts
+// Revised: v1/frontend/src/lib/api.ts
+
+// frontend/src/lib/api.ts
 
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,  // Match authService.ts baseURL
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add interceptors for auth or error handling
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
+// Handle token expiration
 api.interceptors.response.use(
   (response) => response,
   (error) => {

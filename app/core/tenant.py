@@ -1,3 +1,5 @@
+# Revised: v1/app/core/tenant.py
+
 # Enhanced core.tenant.py for strict organization-level data scoping
 
 """

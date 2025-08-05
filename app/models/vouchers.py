@@ -1,3 +1,5 @@
+# Revised: v1/app/models/vouchers.py
+
 # revised fastapi_migration/app/models/vouchers.py
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean, UniqueConstraint, Index
@@ -230,6 +232,7 @@ class SalesVoucher(BaseVoucher):
     vehicle_number = Column(String)
     lr_rr_number = Column(String)
     e_way_bill_number = Column(String)
+    voucher_type = Column(String, nullable=False, default="sales", index=True)
     
     customer = relationship("Customer")
     sales_order = relationship("SalesOrder")
@@ -405,7 +408,6 @@ class PaymentVoucher(BaseVoucher):
     vendor = relationship("Vendor")
     
     __table_args__ = (
-        # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pv_payment_org_voucher_number'),
         Index('idx_pv_payment_org_vendor', 'organization_id', 'vendor_id'),
         Index('idx_pv_payment_org_date', 'organization_id', 'date'),

@@ -1,3 +1,5 @@
+// Revised: v1/frontend/src/components/LoginForm.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Box,
@@ -11,7 +13,7 @@ import {
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/router';
-import { authService } from '../services/authService';
+import { authService } from '../services/authService';  // Change to default import
 
 interface LoginFormProps {
   onLogin: (token: string, loginResponse?: any) => void;
@@ -39,12 +41,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     try {
       const response = await authService.loginWithEmail(data.email, data.password);
       
-      // Store user info
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('user_role', response.user_role);
-      localStorage.setItem('organization_id', response.organization_id?.toString() || '');
-      
-      // Call parent callback with token and response
+      // Store user info - removed redundant localStorage sets since AuthContext handles it
       onLogin(response.access_token, response);
     } catch (error: any) {
       // Better error handling to prevent flicker

@@ -1,6 +1,5 @@
-"""
-Permission checking system for role-based access control
-"""
+# Revised: v1/app/core/permissions.py
+
 from typing import Optional, List
 from fastapi import HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session

@@ -1,16 +1,117 @@
+# Revised: v1/app/api/settings.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_super_admin
 from app.models.base import User, Organization
 from app.services.reset_service import ResetService
+from app.services.otp_service import otp_service
 from app.core.tenant import require_current_organization_id
-from app.schemas.reset import DataResetRequest, ResetScope
+from app.schemas.reset import DataResetRequest, ResetScope, DataResetType
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+@router.post("/factory-reset/request-otp")
+async def request_factory_reset_otp(
+    scope: ResetScope,
+    organization_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin)
+):
+    """Request OTP for factory reset (Org Admin for org, Super Admin for org or all)"""
+    
+    try:
+        if scope == ResetScope.ORGANIZATION:
+            if not current_user.is_super_admin and current_user.role != "org_admin":
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+            if not organization_id:
+                if current_user.is_super_admin:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="organization_id required for organization scope")
+                else:
+                    organization_id = current_user.organization_id
+            # Verify org exists and access
+            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            if not org:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+            if not current_user.is_super_admin and current_user.organization_id != organization_id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to organization")
+        
+        elif scope == ResetScope.ALL_ORGANIZATIONS:
+            if not current_user.is_super_admin:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin only")
+        
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid scope for factory reset")
+        
+        # Generate OTP with additional data
+        purpose = "factory_reset"
+        otp_data = {
+            "scope": scope,
+            "organization_id": organization_id
+        }
+        otp = otp_service.create_otp_verification(db, current_user.email, purpose, additional_data=otp_data)
+        if not otp:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate OTP")
+        
+        return {"message": "OTP sent to your email", "purpose": purpose}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to request factory reset OTP: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post("/factory-reset/confirm")
+async def confirm_factory_reset(
+    otp: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin)
+):
+    """Confirm factory reset with OTP"""
+    
+    try:
+        purpose = "factory_reset"
+        verified, additional_data = otp_service.verify_otp(db, current_user.email, otp, purpose, return_data=True)
+        if not verified:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP")
+        
+        scope = additional_data.get("scope")
+        organization_id = additional_data.get("organization_id")
+        
+        # Create full reset request
+        reset_request = DataResetRequest(
+            scope=scope,
+            organization_id=organization_id,
+            reset_type=DataResetType.FULL_RESET,
+            confirm_reset=True,
+            include_vouchers=True,
+            include_products=True,
+            include_customers=True,
+            include_vendors=True,
+            include_stock=True,
+            include_companies=True,
+            include_users=True
+        )
+        
+        if scope == ResetScope.ORGANIZATION:
+            result = ResetService.reset_organization_data(db, organization_id, current_user, reset_request)
+        elif scope == ResetScope.ALL_ORGANIZATIONS:
+            result = ResetService.reset_all_organizations_data(db, current_user, reset_request)
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset scope")
+        
+        logger.info(f"Factory reset performed by {current_user.id} for scope {scope}")
+        return {"message": "Factory reset successful", "details": result}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to confirm factory reset: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/reset/organization")
 async def reset_organization_data(
@@ -121,8 +222,16 @@ async def reset_entity_data(
                     detail="Insufficient permissions"
                 )
         
+        # Create full reset request for entity
+        reset_request = DataResetRequest(
+            scope=ResetScope.ORGANIZATION,
+            organization_id=entity_id,
+            reset_type=DataResetType.FULL_RESET,
+            confirm_reset=True
+        )
+        
         # Use reset service to perform the reset
-        result = ResetService.reset_organization_data(db, entity_id)
+        result = ResetService.reset_organization_data(db, entity_id, current_user, reset_request)
         
         logger.info(f"Entity {entity_id} data reset by user {current_user.id}")
         
@@ -300,57 +409,26 @@ async def reset_all_organizations(
         )
     
     try:
-        # Get all organizations
-        organizations = db.query(Organization).all()
+        # Create reset request for all
+        reset_request = DataResetRequest(
+            scope=ResetScope.ALL_ORGANIZATIONS,
+            reset_type=DataResetType.FULL_RESET,
+            confirm_reset=True
+        )
         
-        if not organizations:
-            return {
-                "message": "No organizations found to reset",
-                "total_organizations": 0,
-                "reset_results": []
-            }
-        
-        reset_results = []
-        failed_resets = []
-        
-        for org in organizations:
-            try:
-                reset_request = DataResetRequest(
-                    scope=ResetScope.ORGANIZATION,
-                    organization_id=org.id
-                )
-                
-                result = ResetService.reset_organization_data(
-                    db, 
-                    org.id, 
-                    current_user, 
-                    reset_request
-                )
-                
-                reset_results.append({
-                    "organization_id": org.id,
-                    "organization_name": org.name,
-                    "status": "success",
-                    "reset_details": result
-                })
-                
-            except Exception as e:
-                logger.error(f"Failed to reset organization {org.id}: {e}")
-                failed_resets.append({
-                    "organization_id": org.id,
-                    "organization_name": org.name,
-                    "error": str(e)
-                })
+        result = ResetService.reset_all_organizations_data(
+            db, 
+            current_user, 
+            reset_request
+        )
         
         logger.warning(f"ALL ORGANIZATIONS data reset by super admin {current_user.id}")
         
         return {
-            "message": f"Reset completed for {len(reset_results)} organizations",
-            "total_organizations": len(organizations),
-            "successful_resets": len(reset_results),
-            "failed_resets": len(failed_resets),
-            "reset_results": reset_results,
-            "failures": failed_resets
+            "message": result.message,
+            "total_organizations": len(result.organizations_affected),
+            "successful_resets": result.success,
+            "reset_results": result
         }
         
     except HTTPException:
