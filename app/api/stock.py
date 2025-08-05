@@ -561,9 +561,17 @@ async def import_stock_excel(
 
 @router.get("/template/excel")
 async def download_stock_template():
-    """Download Excel template for stock bulk import"""
-    excel_data = StockExcelService.create_template()
-    return ExcelService.create_streaming_response(excel_data, "stock_template.xlsx")
+    """Download Excel template for stock bulk import with error handling"""
+    try:
+        excel_data = StockExcelService.create_template()
+        logger.info("Stock template downloaded successfully")
+        return ExcelService.create_streaming_response(excel_data, "stock_template.xlsx")
+    except Exception as e:
+        logger.error(f"Error generating stock template: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate stock template. Please try again later."
+        )
 
 @router.get("/export/excel")
 async def export_stock_excel(
