@@ -23,7 +23,21 @@ const ProfilePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Alert severity="error">
+          Unable to load user profile. Please try logging in again.
+        </Alert>
+      </Container>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
