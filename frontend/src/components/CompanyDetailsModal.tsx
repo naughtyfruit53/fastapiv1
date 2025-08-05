@@ -148,20 +148,22 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
     setError(null);
     setFieldErrors({});
 
-    // Correct mapping to backend schema fields
+    // Ensure all required fields are properly formatted
     const mappedData = {
-      name: data.name,
-      address1: data.address1,
-      address2: data.address2,
-      city: data.city,
-      state: data.state,
-      pin_code: data.pin_code,
-      state_code: data.state_code,
-      gst_number: data.gst_number,
-      pan_number: data.pan_number,
-      contact_number: data.contact_number,
-      email: data.email,
+      name: data.name.trim(),
+      address1: data.address1.trim(),
+      address2: data.address2?.trim() || '',
+      city: data.city.trim(),
+      state: data.state.trim(),
+      pin_code: data.pin_code.trim(),
+      state_code: data.state_code.trim(),
+      gst_number: data.gst_number?.trim() || null,
+      pan_number: data.pan_number?.trim() || null,
+      contact_number: data.contact_number.trim(),
+      email: data.email?.trim() || null,
     };
+
+    console.log('Submitting company data:', mappedData);
 
     try {
       await companyService.createCompany(mappedData);
@@ -175,6 +177,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
         }, 2000);
       }
     } catch (err: any) {
+      console.error('Company creation error:', err);
       if (err.status === 422 && err.response?.data?.detail) {
         const validationErrors = err.response.data.detail;
         const newFieldErrors: { [key: string]: string } = {};
@@ -183,7 +186,8 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
           newFieldErrors[field] = validationError.msg;
         });
         setFieldErrors(newFieldErrors);
-        setError('Please correct the errors below');
+        setError('Please correct the validation errors below');
+        console.log('Validation errors:', newFieldErrors);
       } else {
         setError(err.userMessage || 'Failed to create company details');
       }
@@ -287,11 +291,8 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                     label="City"
                     {...register('city', { required: 'City is required' })}
                     error={!!errors.city || !!fieldErrors.city}
-                    helperText={errors.city?.message || fieldErrors.city}
+                    helperText={errors.city?.message || fieldErrors.city || 'Auto-populated from PIN code, but editable'}
                     disabled={loading}
-                    InputProps={{
-                      readOnly: true,  // Make readonly
-                    }}
                   />
                 </Grid>
 
@@ -301,11 +302,8 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                     label="State"
                     {...register('state', { required: 'State is required' })}
                     error={!!errors.state || !!fieldErrors.state}
-                    helperText={errors.state?.message || fieldErrors.state}
+                    helperText={errors.state?.message || fieldErrors.state || 'Auto-populated from PIN code, but editable'}
                     disabled={loading}
-                    InputProps={{
-                      readOnly: true,  // Make readonly
-                    }}
                   />
                 </Grid>
 
@@ -321,11 +319,8 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                       }
                     })}
                     error={!!errors.state_code || !!fieldErrors.state_code}
-                    helperText={errors.state_code?.message || fieldErrors.state_code}
+                    helperText={errors.state_code?.message || fieldErrors.state_code || 'Auto-filled from state selection'}
                     disabled={loading}
-                    InputProps={{
-                      readOnly: true,  // Make readonly if auto-populated
-                    }}
                   />
                 </Grid>
 

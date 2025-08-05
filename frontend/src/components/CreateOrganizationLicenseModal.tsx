@@ -155,13 +155,37 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
     setError(null);
     setSuccess(null);
 
+    // Validate required fields that might not be caught by form validation
+    if (!data.state) {
+      setError('Please select a state');
+      setLoading(false);
+      return;
+    }
+
+    // Prepare the data for submission
+    const submissionData = {
+      organization_name: data.organization_name.trim(),
+      superadmin_email: data.superadmin_email.trim(),
+      primary_phone: data.primary_phone?.trim(),
+      admin_password: data.admin_password?.trim() || undefined, // Let backend generate if empty
+      address: data.address.trim(),
+      pin_code: data.pin_code.trim(),
+      city: data.city.trim(),
+      state: data.state.trim(),
+      state_code: data.state_code.trim(),
+      gst_number: data.gst_number?.trim() || undefined, // Optional field
+    };
+
+    console.log('Submitting license data:', submissionData);
+
     try {
-      const result = await organizationService.createLicense(data);
+      const result = await organizationService.createLicense(submissionData);
       setSuccess(result);
       if (onSuccess) {
         onSuccess(result);
       }
     } catch (err: any) {
+      console.error('License creation error:', err);
       setError(err.message || 'Failed to create organization license');
     } finally {
       setLoading(false);
@@ -329,7 +353,8 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     <InputLabel>State</InputLabel>
                     <Select
                       label="State"
-                      {...register('state', { required: 'State is required' })}
+                      value={watch('state') || ''}
+                      onChange={(e) => setValue('state', e.target.value, { shouldValidate: true })}
                       disabled={loading}
                     >
                       {INDIAN_STATES.map((stateName) => (
