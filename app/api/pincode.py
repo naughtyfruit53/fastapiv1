@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from typing import Dict
 import requests
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Mapping of Indian state names to GST state codes
