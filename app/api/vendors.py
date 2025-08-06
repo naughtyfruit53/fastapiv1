@@ -8,6 +8,7 @@ from app.api.v1.auth import (
     require_current_organization_id, validate_organization_access
 )
 from app.core.tenant import TenantQueryFilter
+from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models.base import User, Vendor
 from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse
 from app.services.excel_service import VendorExcelService, ExcelService
@@ -29,12 +30,9 @@ async def get_vendors(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get vendors with strict organization-level filtering"""
-    # Platform user can specify org, regular users use their own
-    if organization_id and getattr(current_user, 'is_platform_user', False):
-        validate_organization_access(organization_id, current_user, db)
-        target_org_id = organization_id
-    else:
-        target_org_id = require_current_organization_id(current_user)
+    
+    # Restrict app super admins from accessing organization data
+    target_org_id = ensure_organization_context(current_user)
     
     query = TenantQueryFilter.apply_organization_filter(
         db.query(Vendor), Vendor, target_org_id, current_user

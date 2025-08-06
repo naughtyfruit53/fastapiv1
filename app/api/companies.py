@@ -6,6 +6,7 @@ from typing import List
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user, require_current_organization_id
 from app.core.tenant import TenantQueryMixin
+from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models.base import User, Company, Organization
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB, CompanyResponse, CompanyErrorResponse
 import logging
@@ -20,12 +21,11 @@ async def get_companies(
 ):
     """Get companies in current organization"""
     
-    if current_user.is_super_admin:
-        companies = db.query(Company).all()
-    else:
-        org_id = require_current_organization_id()
-        query = db.query(Company)
-        companies = TenantQueryMixin.filter_by_tenant(query, Company, org_id).all()
+    # Restrict app super admins from accessing organization data
+    org_id = ensure_organization_context(current_user)
+    
+    query = db.query(Company)
+    companies = TenantQueryMixin.filter_by_tenant(query, Company, org_id).all()
     
     return companies
 
@@ -36,11 +36,9 @@ async def get_current_company(
 ):
     """Get current organization's company details"""
     
-    if current_user.is_super_admin:
-        # For super admin, return None or a message
-        return None  # Or raise HTTPException if preferred
+    # Restrict app super admins from accessing organization data
+    org_id = ensure_organization_context(current_user)
     
-    org_id = require_current_organization_id()
     company = db.query(Company).filter(Company.organization_id == org_id).first()
     
     if not company:

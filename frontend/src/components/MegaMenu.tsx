@@ -115,10 +115,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const handleDemoMode = () => {
-    // Enable demo mode - this could set a global state or localStorage flag
-    localStorage.setItem('demoMode', 'true');
-    // Optionally show a notification or redirect
-    alert('Demo mode activated!');
+    // Navigate to demo page
+    router.push('/demo');
     handleMenuClose();
   };
 

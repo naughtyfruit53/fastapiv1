@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
 from app.core.tenant import TenantQueryMixin, require_current_organization_id
+from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models.base import User, Product, Stock
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse
 from app.services.excel_service import ProductExcelService, ExcelService
@@ -24,12 +25,11 @@ async def get_products(
 ):
     """Get products in current organization"""
     
-    query = db.query(Product)
+    # Restrict app super admins from accessing organization data
+    org_id = ensure_organization_context(current_user)
     
-    # Apply tenant filtering for non-super-admin users
-    if not current_user.is_super_admin:
-        org_id = require_current_organization_id()
-        query = TenantQueryMixin.filter_by_tenant(query, Product, org_id)
+    query = db.query(Product)
+    query = TenantQueryMixin.filter_by_tenant(query, Product, org_id)
     
     if active_only:
         query = query.filter(Product.is_active == True)
