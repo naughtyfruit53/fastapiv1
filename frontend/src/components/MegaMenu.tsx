@@ -45,7 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
-import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
+import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers, canShowUserManagementInMegaMenu } from '../types/user.types';
 
 interface MegaMenuProps {
   user?: any;
@@ -126,6 +126,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const isSuperAdmin = isAppSuperAdmin(user);
   const isOrgAdmin = isOrgSuperAdmin(user);
   const canManage = canManageUsers(user);
+  const canShowUserMgmtInMenu = canShowUserManagementInMegaMenu(user);
 
   // Enhanced logo navigation function
   const navigateToHome = () => {
@@ -407,7 +408,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             )}
 
             {/* Organization Super Admin Only - User Management */}
-            {isOrgAdmin && (
+            {/* Note: User management moved to Organization Settings for Org Superadmins */}
+            {canShowUserMgmtInMenu && (
               <>
                 <Button
                   color="inherit"

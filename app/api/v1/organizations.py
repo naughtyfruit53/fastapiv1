@@ -526,14 +526,29 @@ async def reset_organization_data(
 ):
     """Reset All Data - Organization Super Admin only (removes business data, keeps users and org settings)"""
     from app.services.reset_service import ResetService
+    from app.core.permissions import PermissionChecker, Permission
     
     try:
-        # Only organization admins can perform "Reset All Data"
+        # Enhanced permission check - only organization admins, NOT app super admins
         if current_user.role not in [UserRole.ORG_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only organization super administrators can reset organization data"
             )
+        
+        # App Super Admins should NOT be able to use this endpoint (they use factory-default instead)
+        if getattr(current_user, 'is_super_admin', False) or current_user.role == UserRole.SUPER_ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="App super administrators should use factory-default endpoint instead"
+            )
+        
+        # Check permission using permission system
+        PermissionChecker.require_permission(
+            Permission.RESET_ORG_DATA,
+            current_user,
+            db
+        )
         
         if not current_user.organization_id:
             raise HTTPException(
@@ -574,12 +589,21 @@ async def factory_default_system(
     current_user: User = Depends(get_current_active_user)
 ):
     """Factory Default - App Super Admin only (complete system reset)"""
-    # Only app super admins can perform factory default
-    if not current_user.is_super_admin:
+    from app.core.permissions import PermissionChecker, Permission
+    
+    # Enhanced permission check using PermissionChecker
+    if not PermissionChecker.can_factory_reset(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only app super administrators can perform factory default reset"
         )
+    
+    # Additional check using permission system
+    PermissionChecker.require_permission(
+        Permission.FACTORY_RESET,
+        current_user,
+        db
+    )
     
     try:
         from app.services.reset_service import ResetService

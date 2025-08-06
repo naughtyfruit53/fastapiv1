@@ -1,9 +1,7 @@
 // New: v1/frontend/src/pages/dashboard/AppSuperAdminDashboard.tsx
 
 import React from 'react';
-import { Card, List, Typography } from 'antd'; // Assuming Ant Design
-
-const { Title } = Typography;
+import { Card, List, ListItem, ListItemText, Typography, CardContent, CardHeader } from '@mui/material'; // Using Material-UI
 
 const AppSuperAdminDashboard: React.FC = () => {
   // Mock data or fetch global stats, org list, etc.
@@ -14,19 +12,21 @@ const AppSuperAdminDashboard: React.FC = () => {
 
   return (
     <div>
-      <Title level={2}>App Super Admin Dashboard</Title>
-      <Card title="Organizations Overview">
-        <List
-          dataSource={organizations}
-          renderItem={(org) => (
-            <List.Item>
-              <List.Item.Meta
-                title={org.name}
-                description={`Users: ${org.users} | Status: ${org.status}`}
-              />
-            </List.Item>
-          )}
-        />
+      <Typography variant="h4" gutterBottom>App Super Admin Dashboard</Typography>
+      <Card>
+        <CardHeader title="Organizations Overview" />
+        <CardContent>
+          <List>
+            {organizations.map((org) => (
+              <ListItem key={org.id}>
+                <ListItemText
+                  primary={org.name}
+                  secondary={`Users: ${org.users} | Status: ${org.status}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </CardContent>
       </Card>
       {/* Add more super admin features: create org, manage plans, global settings */}
     </div>
