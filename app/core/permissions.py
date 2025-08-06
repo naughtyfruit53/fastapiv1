@@ -44,6 +44,12 @@ class Permission:
     # Audit permissions
     VIEW_AUDIT_LOGS = "view_audit_logs"
     VIEW_ALL_AUDIT_LOGS = "view_all_audit_logs"
+    
+    # Factory reset permission (App Super Admin only)
+    FACTORY_RESET = "factory_reset"
+    
+    # Organization settings access
+    ACCESS_ORG_SETTINGS = "access_org_settings"
 
 
 class PermissionChecker:
@@ -70,6 +76,8 @@ class PermissionChecker:
             Permission.SUPER_ADMIN,
             Permission.VIEW_AUDIT_LOGS,
             Permission.VIEW_ALL_AUDIT_LOGS,
+            Permission.FACTORY_RESET,
+            # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         UserRole.ORG_ADMIN: [
             Permission.MANAGE_USERS,
@@ -79,16 +87,20 @@ class PermissionChecker:
             Permission.RESET_OWN_PASSWORD,
             Permission.RESET_ORG_PASSWORDS,
             Permission.RESET_OWN_DATA,
+            Permission.RESET_ORG_DATA,  # Org admins can reset their org data
             Permission.VIEW_AUDIT_LOGS,
+            Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
         ],
         UserRole.ADMIN: [
             Permission.VIEW_USERS,
             Permission.CREATE_USERS,
             Permission.RESET_OWN_PASSWORD,
             Permission.VIEW_AUDIT_LOGS,
+            Permission.ACCESS_ORG_SETTINGS,  # Regular admins also have org settings access
         ],
         UserRole.STANDARD_USER: [
             Permission.RESET_OWN_PASSWORD,
+            Permission.ACCESS_ORG_SETTINGS,  # Standard users can access basic org settings
         ],
     }
     
@@ -254,6 +266,38 @@ class PermissionChecker:
             return [user.organization_id]
         
         return []
+    
+    @staticmethod
+    def can_access_organization_settings(user: User) -> bool:
+        """Check if user can access organization settings (hidden from App Super Admins)"""
+        if not user or not user.role:
+            return False
+        
+        # App Super Admins should NOT have access to organization settings per requirements
+        if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
+            return False
+        
+        # All other users (including org admins) can access org settings
+        return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)
+    
+    @staticmethod
+    def can_factory_reset(user: User) -> bool:
+        """Check if user can perform factory reset (App Super Admin only)"""
+        if not user or not user.role:
+            return False
+        
+        # Only App Super Admins can perform factory reset
+        return getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN
+    
+    @staticmethod
+    def can_show_user_management_in_menu(user: User) -> bool:
+        """Check if user management should be shown in mega menu (App Super Admin only)"""
+        if not user or not user.role:
+            return False
+        
+        # Only App Super Admins should see user management in mega menu
+        # Org admins should access it through Organization Settings
+        return getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN
 
 
 def require_permission(permission: str):

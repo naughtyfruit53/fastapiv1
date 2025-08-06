@@ -1,6 +1,6 @@
 // frontend/src/services/vouchersService.ts
 
-import api from './api';
+import api from '../lib/api';
 
 export const voucherService = {
   // Generic Voucher Methods

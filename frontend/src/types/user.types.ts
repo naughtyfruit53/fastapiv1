@@ -24,6 +24,8 @@ export interface User {
   is_super_admin?: boolean;
   organization_id?: number;
   must_change_password?: boolean;
+  full_name?: string;
+  avatar_path?: string;
   // Add other fields
 }
 
@@ -72,4 +74,30 @@ export const isAppSuperAdmin = (user: User | null): boolean => {
 export const isOrgSuperAdmin = (user: User | null): boolean => {
   if (!user) return false;
   return user.role === 'org_admin';
+};
+
+// New permission functions for role-based interface controls
+export const canAccessOrganizationSettings = (user: User | null): boolean => {
+  if (!user) return false;
+  // Organization Settings should be hidden from App Super Admins
+  return !isAppSuperAdmin(user);
+};
+
+export const canShowFactoryResetOnly = (user: User | null): boolean => {
+  if (!user) return false;
+  // App Super Admins should only see Factory Reset option in Data Management
+  return isAppSuperAdmin(user);
+};
+
+export const canShowOrgDataResetOnly = (user: User | null): boolean => {
+  if (!user) return false;
+  // Org Superadmins should only see Reset Organization Data option
+  return isOrgSuperAdmin(user) && !isAppSuperAdmin(user);
+};
+
+export const canShowUserManagementInMegaMenu = (user: User | null): boolean => {
+  if (!user) return false;
+  // User management should not be in mega menu for Org Superadmins
+  // Only App Super Admins can have user management in mega menu
+  return isAppSuperAdmin(user);
 };

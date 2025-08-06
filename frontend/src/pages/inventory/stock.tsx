@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import api, { masterDataService, companyService } from '../../services/authService';
+import { authService, masterDataService, companyService } from '../../services/authService';
 import {
   Box,
   Container,

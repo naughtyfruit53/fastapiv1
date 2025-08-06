@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { Home, Refresh, ArrowBack } from '@mui/icons-material';
 import { useRouter } from 'next/router';
+import { NextPageContext } from 'next';
 
 interface ErrorProps {
   statusCode?: number;
@@ -16,7 +17,11 @@ interface ErrorProps {
   err?: Error;
 }
 
-const ErrorPage: React.FC<ErrorProps> = ({ statusCode, err }) => {
+interface ErrorPageComponent extends React.FC<ErrorProps> {
+  getInitialProps?: (ctx: NextPageContext) => Promise<ErrorProps> | ErrorProps;
+}
+
+const ErrorPage: ErrorPageComponent = ({ statusCode, err }) => {
   const router = useRouter();
 
   const handleGoHome = () => {
@@ -89,7 +94,7 @@ const ErrorPage: React.FC<ErrorProps> = ({ statusCode, err }) => {
   );
 };
 
-ErrorPage.getInitialProps = ({ res, err }: any) => {
+ErrorPage.getInitialProps = ({ res, err }: NextPageContext) => {
   const statusCode = res ? res.statusCode : err ? err.statusCode : 404;
   return { statusCode };
 };

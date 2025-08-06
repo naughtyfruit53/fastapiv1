@@ -1,34 +1,52 @@
 // New: v1/frontend/src/pages/dashboard/OrgDashboard.tsx
 
 import React from 'react';
-import { Card, Statistic, Row, Col, Typography } from 'antd'; // Assuming Ant Design
-
-const { Title } = Typography;
+import { Card, Typography, Grid, CardContent, Box } from '@mui/material';
 
 const OrgDashboard: React.FC = () => {
   // Mock org-specific data
   return (
-    <div>
-      <Title level={2}>Organization Dashboard</Title>
-      <Row gutter={16}>
-        <Col span={8}>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>Organization Dashboard</Typography>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
           <Card>
-            <Statistic title="Active Vouchers" value={1128} />
+            <CardContent>
+              <Typography variant="h4" color="primary">
+                1128
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Active Vouchers
+              </Typography>
+            </CardContent>
           </Card>
-        </Col>
-        <Col span={8}>
+        </Grid>
+        <Grid item xs={12} md={4}>
           <Card>
-            <Statistic title="Stock Items" value={93} />
+            <CardContent>
+              <Typography variant="h4" color="primary">
+                93
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Stock Items
+              </Typography>
+            </CardContent>
           </Card>
-        </Col>
-        <Col span={8}>
+        </Grid>
+        <Grid item xs={12} md={4}>
           <Card>
-            <Statistic title="Pending Invoices" value={42} />
+            <CardContent>
+              <Typography variant="h4" color="primary">
+                15
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Products
+              </Typography>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
-      {/* Add more org-specific components: charts, recent activity */}
-    </div>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 

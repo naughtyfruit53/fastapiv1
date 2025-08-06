@@ -39,7 +39,7 @@ const FactoryReset: React.FC = () => {
   if (!canReset) {
     return (
       <Alert severity="error">
-        You don't have permission to access reset functionality. Only organization administrators and app super administrators can perform resets.
+        You don&apos;t have permission to access reset functionality. Only organization administrators and app super administrators can perform resets.
       </Alert>
     );
   }

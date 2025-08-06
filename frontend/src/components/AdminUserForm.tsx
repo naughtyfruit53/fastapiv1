@@ -1,36 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Button } from '@mui/material';
-import { useForm } from 'react-hook-form';
 
 interface AdminUserFormProps {
   onSubmit: (data: any) => void;
 }
 
 const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const [formData, setFormData] = useState({
+    email: '',
+    full_name: '',
+    role: 'platform_admin',
+    password: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  };
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       <TextField
         fullWidth
         label="Email"
-        {...register('email', { required: 'Email is required' })}
-        error={!!errors.email}
-        helperText={errors.email?.message as string}
+        value={formData.email}
+        onChange={handleChange('email')}
+        required
         margin="normal"
       />
       <TextField
         fullWidth
         label="Full Name"
-        {...register('full_name')}
+        value={formData.full_name}
+        onChange={handleChange('full_name')}
         margin="normal"
       />
       <FormControl fullWidth margin="normal">
         <InputLabel>Role</InputLabel>
         <Select
           label="Role"
-          {...register('role', { required: 'Role is required' })}
-          defaultValue="platform_admin"
+          value={formData.role}
+          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
         >
           <MenuItem value="platform_admin">Platform Admin</MenuItem>
         </Select>
@@ -39,9 +53,9 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
         fullWidth
         label="Password"
         type="password"
-        {...register('password', { required: 'Password is required' })}
-        error={!!errors.password}
-        helperText={errors.password?.message as string}
+        value={formData.password}
+        onChange={handleChange('password')}
+        required
         margin="normal"
       />
       <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
