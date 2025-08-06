@@ -102,12 +102,12 @@ def test_org_and_users(test_db: Session):
 def org_admin_headers(client: TestClient, test_org_and_users):
     org, org_admin, super_admin = test_org_and_users
     
-    # Login as organization admin
+    # Login as organization admin using form data
     login_data = {
-        "email": org_admin.email,
+        "username": org_admin.email,
         "password": "testpass123"
     }
-    response = client.post("/api/v1/auth/login", json=login_data)
+    response = client.post("/api/v1/auth/login", data=login_data)
     assert response.status_code == 200
     token = response.json()["access_token"]
     
@@ -117,12 +117,12 @@ def org_admin_headers(client: TestClient, test_org_and_users):
 def super_admin_headers(client: TestClient, test_org_and_users):
     org, org_admin, super_admin = test_org_and_users
     
-    # Login as super admin
+    # Login as super admin using form data
     login_data = {
-        "email": super_admin.email,
+        "username": super_admin.email,
         "password": "testpass123"
     }
-    response = client.post("/api/v1/auth/login", json=login_data)
+    response = client.post("/api/v1/auth/login", data=login_data)
     assert response.status_code == 200
     token = response.json()["access_token"]
     
@@ -147,7 +147,7 @@ def test_org_admin_can_reset_organization_data(client: TestClient, org_admin_hea
     
     response_data = response.json()
     assert "message" in response_data
-    assert "Organization data has been reset successfully" in response_data["message"]
+    assert "All business data has been reset for organization" in response_data["message"]
     assert "details" in response_data
     
     # Verify data was deleted
@@ -224,12 +224,12 @@ def test_regular_user_cannot_reset_data(client: TestClient, test_org_and_users, 
     test_db.add(regular_user)
     test_db.commit()
     
-    # Login as regular user
+    # Login as regular user using form data
     login_data = {
-        "email": regular_user.email,
+        "username": regular_user.email,
         "password": "testpass123"
     }
-    response = client.post("/api/v1/auth/login", json=login_data)
+    response = client.post("/api/v1/auth/login", data=login_data)
     assert response.status_code == 200
     token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -237,7 +237,7 @@ def test_regular_user_cannot_reset_data(client: TestClient, test_org_and_users, 
     # Try to reset data
     response = client.post("/api/v1/organizations/reset-data", headers=headers)
     assert response.status_code == 403
-    assert "don't have permission to reset data" in response.json()["detail"]
+    assert "Only organization super administrators can reset organization data" in response.json()["detail"]
 
 def test_unauthenticated_user_cannot_reset_data(client: TestClient):
     """Test that unauthenticated users cannot access reset functionality"""

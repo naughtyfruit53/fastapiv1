@@ -179,6 +179,44 @@ export default function Settings() {
       )}
 
       <Grid container spacing={3}>
+        {/* Admin Section - For App Admin User Creation */}
+        {isSuperAdmin && (
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <Security sx={{ mr: 1 }} />
+                Admin Management
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  App admins can create organization licenses but cannot create other app admin users.
+                </Typography>
+              </Alert>
+
+              <Button
+                variant="contained"
+                onClick={() => router.push('/admin/license-management')}
+                sx={{ mb: 2, mr: 2 }}
+                startIcon={<Business />}
+                color="primary"
+              >
+                License Management
+              </Button>
+              
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/admin/organizations')}
+                sx={{ mb: 2 }}
+                startIcon={<Business />}
+              >
+                Manage Organizations
+              </Button>
+            </Paper>
+          </Grid>
+        )}
+
         {/* Organization Settings - Hidden from App Super Admins */}
         {canAccessOrgSettings && (
           <Grid item xs={12} md={6}>
@@ -356,30 +394,29 @@ export default function Settings() {
           </Grid>
         )}
 
-        {/* Super Admin Only Settings */}
+        {/* System Administration - App-level controls only */}
         {isSuperAdmin && (
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
                 <Warning sx={{ mr: 1, color: 'warning.main' }} />
-                Super Admin Controls
+                System Administration
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              <Button
-                variant="outlined"
-                onClick={() => router.push('/admin/organizations')}
-                sx={{ mr: 2, mb: 2 }}
-              >
-                Manage Organizations
-              </Button>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  System-level controls for application management. Use with caution.
+                </Typography>
+              </Alert>
 
               <Button
                 variant="outlined"
-                onClick={() => router.push('/admin/users')}
-                sx={{ mb: 2 }}
+                onClick={() => router.push('/dashboard')}
+                sx={{ mr: 2, mb: 2 }}
+                startIcon={<Business />}
               >
-                Manage Users
+                App Dashboard
               </Button>
             </Paper>
           </Grid>
