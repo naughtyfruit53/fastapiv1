@@ -1,10 +1,10 @@
 # Revised: v1/app/core/permissions.py
 
-from typing import Optional, List
+from typing import Optional, List, Any
 from fastapi import HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
-from app.models.base import User, Organization
-from app.schemas.base import UserRole
+from app.models.base import User, Organization, PlatformUser
+from app.schemas.user import UserRole, PlatformUserRole
 from app.core.database import get_db
 from app.core.audit import AuditLogger, get_client_ip, get_user_agent
 import logging
@@ -49,7 +49,7 @@ class Permission:
 class PermissionChecker:
     """Service for checking user permissions"""
     
-    # Role-based permission mapping
+    # Role-based permission mapping for regular users
     ROLE_PERMISSIONS = {
         UserRole.SUPER_ADMIN: [
             Permission.MANAGE_USERS,
@@ -79,7 +79,6 @@ class PermissionChecker:
             Permission.RESET_OWN_PASSWORD,
             Permission.RESET_ORG_PASSWORDS,
             Permission.RESET_OWN_DATA,
-            Permission.RESET_ORG_DATA,
             Permission.VIEW_AUDIT_LOGS,
         ],
         UserRole.ADMIN: [
@@ -93,18 +92,58 @@ class PermissionChecker:
         ],
     }
     
+    # Platform role permissions
+    PLATFORM_ROLE_PERMISSIONS = {
+        PlatformUserRole.SUPER_ADMIN: [
+            Permission.SUPER_ADMIN,
+            Permission.PLATFORM_ADMIN,
+            Permission.MANAGE_USERS,  # For platform users
+            Permission.CREATE_USERS,  # For creating platform admins
+            Permission.RESET_ANY_PASSWORD,
+            Permission.RESET_ANY_DATA,
+            Permission.MANAGE_ORGANIZATIONS,
+            Permission.RESET_ANY_DATA,
+            Permission.VIEW_ALL_AUDIT_LOGS,
+        ],
+        PlatformUserRole.PLATFORM_ADMIN: [
+            Permission.PLATFORM_ADMIN,
+            Permission.MANAGE_ORGANIZATIONS,
+            Permission.CREATE_ORGANIZATIONS,
+            Permission.VIEW_ORGANIZATIONS,
+            Permission.RESET_ANY_PASSWORD,  # For org passwords
+            Permission.VIEW_AUDIT_LOGS,
+        ],
+    }
+    
     @staticmethod
     def has_permission(user: User, permission: str) -> bool:
-        """Check if user has a specific permission"""
         if not user or not user.role:
             return False
         
-        # Super admin always has all permissions
         if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
             return True
         
         user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(user.role, [])
         return permission in user_permissions
+    
+    @staticmethod
+    def has_platform_permission(platform_user: Any, permission: str) -> bool:
+        """Check platform-specific permissions, handling both User and PlatformUser"""
+        if isinstance(platform_user, User):
+            # For User type, check if super admin
+            if platform_user.is_super_admin and platform_user.email == "naughtyfruit53@gmail.com":
+                return True
+            # Fallback to regular permission check
+            return PermissionChecker.has_permission(platform_user, permission)
+        
+        if isinstance(platform_user, PlatformUser):
+            if platform_user.role == PlatformUserRole.SUPER_ADMIN and platform_user.email == "naughtyfruit53@gmail.com":
+                return True  # Primary super admin always has all permissions
+            
+            platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(platform_user.role, [])
+            return permission in platform_permissions
+        
+        return False
     
     @staticmethod
     def require_permission(
@@ -139,7 +178,7 @@ class PermissionChecker:
     @staticmethod
     def can_access_organization(user: User, organization_id: int) -> bool:
         """Check if user can access specific organization data"""
-        # Super admin can access any organization
+        # Super admin always can access any organization
         if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
             return True
         

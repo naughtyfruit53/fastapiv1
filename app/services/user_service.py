@@ -173,6 +173,27 @@ class UserService:
         return db_user
     
     @staticmethod
+    def create_platform_user(db: Session, platform_user_create: PlatformUserCreate, creator_email: str) -> PlatformUser:
+        """Create a new platform user, only if creator is naughtyfruit53@gmail.com"""
+        if creator_email != "naughtyfruit53@gmail.com":
+            raise ValueError("Only the primary super admin can create platform users")
+        
+        hashed_password = get_password_hash(platform_user_create.password)
+        
+        db_user = PlatformUser(
+            email=platform_user_create.email,
+            hashed_password=hashed_password,
+            full_name=platform_user_create.full_name,
+            role=platform_user_create.role,
+            is_active=platform_user_create.is_active,
+        )
+        
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    
+    @staticmethod
     def update_user(db: Session, user_id: int, user_update: UserUpdate) -> Optional[User]:
         """Update user information"""
         user = db.query(User).filter(User.id == user_id).first()
