@@ -22,9 +22,12 @@ import { ArrowBack, Person, Save, Cancel } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useMutation } from 'react-query';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+import { canManageUsers, isAppSuperAdmin } from '../../types/user.types';
 
 const AddUser: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -42,8 +45,8 @@ const AddUser: React.FC = () => {
 
   // Get user info for authorization
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-  const canAddUser = userRole === 'org_admin' || userRole === 'super_admin';
+  const canAddUser = canManageUsers(user);
+  const isSuperAdmin = isAppSuperAdmin(user);
 
   const createUserMutation = useMutation(
     async (userData: any) => {
@@ -219,7 +222,7 @@ const AddUser: React.FC = () => {
               >
                 <MenuItem value="standard_user">Standard User</MenuItem>
                 <MenuItem value="admin">Admin</MenuItem>
-                {userRole === 'super_admin' && (
+                {isSuperAdmin && (
                   <MenuItem value="org_admin">Organization Admin</MenuItem>
                 )}
               </Select>

@@ -46,6 +46,8 @@ ui_.py  # Auto-generated UI files from pyside6-uic
 
 #Node.js dependencies
 node_modules/
+package-lock.json
+*/package-lock.json
 
 # Next.js build output
 .next/

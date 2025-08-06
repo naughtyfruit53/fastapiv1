@@ -45,6 +45,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useRouter } from 'next/router';
 import { userService } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import { getDisplayRole, canManageUsers, canResetPasswords } from '../../types/user.types';
 
 interface User {
   id: number;
@@ -52,6 +54,7 @@ interface User {
   username: string;
   full_name: string;
   role: string;
+  is_super_admin?: boolean;
   department?: string;
   designation?: string;
   is_active: boolean;
@@ -62,6 +65,7 @@ interface User {
 const UserManagement: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -83,10 +87,17 @@ const UserManagement: React.FC = () => {
     }
   });
 
-  // Real API calls using userService
+  // Permission checks
+  const canManage = canManageUsers(currentUser);
+  const canReset = canResetPasswords(currentUser);
+
+  // Real API calls using userService - moved outside conditional to avoid hook issues
   const { data: users, isLoading } = useQuery(
     'organization-users',
-    userService.getOrganizationUsers
+    userService.getOrganizationUsers,
+    {
+      enabled: canManage // Only fetch if user has permission
+    }
   );
 
   const createUserMutation = useMutation(
@@ -136,6 +147,17 @@ const UserManagement: React.FC = () => {
       }
     }
   );
+
+  // If user doesn&apos;t have permission to manage users, redirect or show message
+  if (!canManage) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          You don&apos;t have permission to manage users. Only organization administrators can manage users.
+        </Alert>
+      </Container>
+    );
+  }
 
   const resetForm = () => {
     setFormData({
@@ -224,17 +246,23 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const getRoleChip = (role: string) => {
-    const roleConfig = {
-      admin: { label: 'Admin', color: 'primary' as const },
-      standard_user: { label: 'Standard User', color: 'default' as const },
-      org_admin: { label: 'Organization Admin', color: 'secondary' as const }
-    };
+  const getRoleChip = (role: string, is_super_admin?: boolean) => {
+    const displayRole = getDisplayRole(role, is_super_admin);
     
-    const config = roleConfig[role as keyof typeof roleConfig] || 
-                   { label: role, color: 'default' as const };
+    // Color mapping based on actual role levels
+    let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default';
     
-    return <Chip label={config.label} color={config.color} size="small" />;
+    if (is_super_admin || role === 'super_admin') {
+      color = 'error'; // Red for highest privilege
+    } else if (role === 'org_admin') {
+      color = 'secondary'; // Purple for org admin
+    } else if (role === 'admin') {
+      color = 'primary'; // Blue for admin
+    } else {
+      color = 'default'; // Gray for standard users
+    }
+    
+    return <Chip label={displayRole} color={color} size="small" />;
   };
 
   const getStatusChip = (isActive: boolean) => {
@@ -361,7 +389,7 @@ const UserManagement: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    {getRoleChip(user.role)}
+                    {getRoleChip(user.role, user.is_super_admin)}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
@@ -388,14 +416,16 @@ const UserManagement: React.FC = () => {
                     >
                       <Edit />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      color="info"
-                      onClick={() => handleAction(user, 'reset')}
-                      title="Reset Password"
-                    >
-                      <RestartAlt />
-                    </IconButton>
+                    {canReset && (
+                      <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => handleAction(user, 'reset')}
+                        title="Reset Password"
+                      >
+                        <RestartAlt />
+                      </IconButton>
+                    )}
                     {user.is_active ? (
                       <IconButton
                         size="small"

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext'; // Assume AuthContext provides user role
 import { requestResetOTP, confirmReset } from '../../services/resetService';
 import { Modal, Button, Input, message, Select } from 'antd'; // Assuming Ant Design for UI
+import { canFactoryReset, isAppSuperAdmin } from '../../types/user.types';
 
 const FactoryReset: React.FC = () => {
   const { user } = useAuth(); // Get current user from context
@@ -13,10 +14,10 @@ const FactoryReset: React.FC = () => {
   const [scope, setScope] = useState<'organization' | 'all_organizations'>('organization');
   const [orgId, setOrgId] = useState<number | undefined>(undefined);
 
-  const isSuperAdmin = user?.is_super_admin || user?.role === 'super_admin';
-  const isOrgAdmin = user?.role === 'org_admin';
+  const isSuperAdmin = isAppSuperAdmin(user);
+  const canReset = canFactoryReset(user);
 
-  if (!isSuperAdmin && !isOrgAdmin) {
+  if (!canReset) {
     return null; // Hide if not authorized
   }
 
