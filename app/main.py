@@ -11,7 +11,7 @@ from app.api.routes import admin
 import logging
 
 # Import enhanced v1 routers
-from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset
+from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
 from app.api.v1.organizations import router as organizations_router  # Updated import for organizations in v1
 
 # Configure logging
@@ -80,6 +80,11 @@ app.include_router(
     v1_reset.router, 
     prefix=f"{config_settings.API_V1_STR}/reset", 
     tags=["reset-v1"]
+)
+app.include_router(
+    v1_app_users.router,
+    prefix=f"{config_settings.API_V1_STR}/app-users",
+    tags=["app-user-management"]
 )
 
 # ------------------------------------------------------------------------------

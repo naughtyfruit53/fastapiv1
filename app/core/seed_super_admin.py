@@ -78,7 +78,7 @@ def seed_super_admin(db: Session = None) -> None:
         # Create the super admin user
         super_admin = User(
             email=super_admin_email,
-            username="superadmin",
+            username=super_admin_email.split("@")[0],  # Use email prefix as username
             hashed_password=hashed_password,
             full_name="Super Admin",
             role=UserRole.SUPER_ADMIN,
