@@ -1,3 +1,25 @@
+/**
+ * Settings Page Component
+ * 
+ * This component provides the main settings interface for users with different roles.
+ * It uses centralized role and permission functions from user.types.ts to ensure
+ * consistent behavior across the application.
+ * 
+ * Role Display:
+ * - Uses getDisplayRole(user.role, user.is_super_admin) for consistent role naming
+ * - Prioritizes is_super_admin flag over role string for App Super Admin detection
+ * 
+ * Permission Checks:
+ * - isAppSuperAdmin(user): Determines if user is an app-level super admin
+ * - canFactoryReset(user): Determines if user can perform reset operations  
+ * - canManageUsers(user): Determines if user can manage other users
+ * 
+ * Features shown based on permissions:
+ * - App Super Admin: All features including cross-org management
+ * - Org Admin: Organization-level management and reset options
+ * - Standard User: Basic profile and company detail access only
+ */
+
 import React, { useState } from 'react';
 import {
   Box,
