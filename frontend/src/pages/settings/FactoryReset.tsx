@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import {
   RestartAlt,
-  FactoryIcon,
   Warning,
   Security
 } from '@mui/icons-material';
