@@ -359,35 +359,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            {/* Ordered menu items: Master Data, Inventory, Vouchers, Reports, Settings */}
-            {['masters', 'inventory', 'vouchers', 'reports'].map((key) => {
-              const menu = menuItems[key as keyof typeof menuItems];
-              return (
+            {/* Different menu structures based on user type */}
+            {isSuperAdmin ? (
+              <>
+                {/* App Super Admins: Only Demo, License Management, Settings */}
                 <Button
-                  key={key}
                   color="inherit"
-                  startIcon={menu.icon}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, key)}
+                  startIcon={<DeveloperMode />}
+                  onClick={handleDemoMode}
                   sx={{ mx: 1 }}
                 >
-                  {menu.title}
+                  Demo
                 </Button>
-              );
-            })}
-
-            <Button
-              color="inherit"
-              startIcon={<Settings />}
-              onClick={() => router.push('/settings')}
-              sx={{ mx: 1 }}
-            >
-              Settings
-            </Button>
-
-            {/* App Super Admin Only - License Management and Demo */}
-            {isSuperAdmin && (
-              <>
                 <Button
                   color="inherit"
                   startIcon={<Security />}
@@ -398,34 +381,39 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 </Button>
                 <Button
                   color="inherit"
-                  startIcon={<DeveloperMode />}
-                  onClick={handleDemoMode}
+                  startIcon={<Settings />}
+                  onClick={() => router.push('/settings')}
                   sx={{ mx: 1 }}
                 >
-                  Demo
+                  Settings
                 </Button>
               </>
-            )}
-
-            {/* Organization Super Admin Only - User Management */}
-            {/* Note: User management moved to Organization Settings for Org Superadmins */}
-            {canShowUserMgmtInMenu && (
+            ) : (
               <>
+                {/* Organization users: Full menu access for business operations */}
+                {['masters', 'inventory', 'vouchers', 'reports'].map((key) => {
+                  const menu = menuItems[key as keyof typeof menuItems];
+                  return (
+                    <Button
+                      key={key}
+                      color="inherit"
+                      startIcon={menu.icon}
+                      endIcon={<ExpandMore />}
+                      onClick={(e) => handleMenuClick(e, key)}
+                      sx={{ mx: 1 }}
+                    >
+                      {menu.title}
+                    </Button>
+                  );
+                })}
+
                 <Button
                   color="inherit"
-                  startIcon={<People />}
-                  onClick={() => router.push('/settings/user-management')}
+                  startIcon={<Settings />}
+                  onClick={() => router.push('/settings')}
                   sx={{ mx: 1 }}
                 >
-                  Manage Users
-                </Button>
-                <Button
-                  color="inherit"
-                  startIcon={<AddBusiness />}
-                  onClick={() => router.push('/settings/add-user')}
-                  sx={{ mx: 1 }}
-                >
-                  Add User
+                  Settings
                 </Button>
               </>
             )}
