@@ -10,13 +10,19 @@ from app.api.vouchers import router as vouchers_router
 from app.api.routes import admin
 import logging
 
-# Import enhanced v1 routers
-from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
-from app.api.v1.organizations import router as organizations_router  # Updated import for organizations in v1
-
-# Configure logging
+# Configure logging at the top
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Import enhanced v1 routers
+from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
+# Updated import for organizations in v1
+try:
+    from app.api.v1.organizations import router as organizations_router
+    logger.info("Successfully imported organizations_router")
+except Exception as import_error:
+    logger.error(f"Failed to import organizations_router: {str(import_error)}")
+    raise
 
 # Create FastAPI app
 app = FastAPI(
@@ -91,7 +97,12 @@ app.include_router(
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------
 app.include_router(platform.router, prefix=f"{config_settings.API_V1_STR}/platform", tags=["platform"])
-app.include_router(organizations_router, prefix=f"{config_settings.API_V1_STR}/organizations", tags=["organizations"])  # Updated to use organizations_router
+try:
+    app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
+    logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
+except Exception as e:
+    logger.error(f"Error including organizations router: {str(e)}")
+
 app.include_router(users.router, prefix=f"{config_settings.API_V1_STR}/users", tags=["users"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
 app.include_router(companies.router, prefix=f"{config_settings.API_V1_STR}/companies", tags=["companies"])

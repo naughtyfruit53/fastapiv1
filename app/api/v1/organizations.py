@@ -531,6 +531,7 @@ async def reset_organization_data(
     from app.core.permissions import PermissionChecker, Permission
     
     try:
+        logger.info(f"Reset request by user: {current_user.email}, role: {current_user.role}, org_id: {current_user.organization_id}")
         # Enhanced permission check - only organization admins, NOT app super admins
         if current_user.role not in [UserRole.ORG_ADMIN]:
             logger.warning(f"Unauthorized reset attempt by user {current_user.email} with role {current_user.role}")
@@ -565,6 +566,7 @@ async def reset_organization_data(
                 detail="User is not associated with any organization"
             )
         
+        logger.info(f"Querying for organization id {current_user.organization_id}")
         org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
         if not org:
             logger.error(f"Organization {current_user.organization_id} not found for user {current_user.email}")
