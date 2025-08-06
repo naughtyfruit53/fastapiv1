@@ -152,10 +152,13 @@ class UserService:
         """Create a new user"""
         hashed_password = get_password_hash(user_create.password)
         
+        # Auto-generate username from email if not provided
+        username = user_create.username or user_create.email.split("@")[0]
+        
         db_user = User(
             organization_id=user_create.organization_id,
             email=user_create.email,
-            username=user_create.username,
+            username=username,
             hashed_password=hashed_password,
             full_name=user_create.full_name,
             role=user_create.role,
@@ -201,6 +204,11 @@ class UserService:
             return None
         
         update_data = user_update.dict(exclude_unset=True)
+        
+        # Auto-update username if email changes and username is not explicitly provided
+        if 'email' in update_data and 'username' not in update_data:
+            update_data['username'] = update_data['email'].split("@")[0]
+        
         for field, value in update_data.items():
             setattr(user, field, value)
         

@@ -23,14 +23,9 @@ import {
 } from '@mui/material';
 import {
   Add,
-  Edit,
-  Lock,
-  LockOpen,
-  RestartAlt,
   Visibility,
   Business,
-  Security,
-  Person
+  Security
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useRouter } from 'next/router';
@@ -54,9 +49,6 @@ const LicenseManagement: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'hold' | 'activate' | 'reset' | null>(null);
 
   // API calls using real service
   const { data: organizations, isLoading } = useQuery(
@@ -74,52 +66,9 @@ const LicenseManagement: React.FC = () => {
     }
   );
 
-  const updateOrganizationMutation = useMutation(
-    async ({ orgId, action, data }: { orgId: number; action: string; data?: any }) => {
-      // Map actions to appropriate API calls
-      if (action === 'activate') {
-        return organizationService.updateOrganizationById(orgId, { status: 'active' });
-      } else if (action === 'hold') {
-        return organizationService.updateOrganizationById(orgId, { status: 'suspended' });
-      } else if (action === 'reset') {
-        // TODO: Implement password reset API call
-        console.log('Password reset for org:', orgId);
-        return { message: 'Password reset successfully' };
-      }
-      return { message: `Organization ${action} successfully` };
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('organizations');
-        setActionDialogOpen(false);
-        setSelectedOrg(null);
-        setActionType(null);
-      }
-    }
-  );
-
-  const resetForm = () => {
-    // No longer needed as the modal handles its own form reset
-  };
-
   const handleCreateLicense = (result: any) => {
     // License creation is handled by the modal
     queryClient.invalidateQueries('organizations');
-  };
-
-  const handleAction = (org: Organization, action: 'hold' | 'activate' | 'reset') => {
-    setSelectedOrg(org);
-    setActionType(action);
-    setActionDialogOpen(true);
-  };
-
-  const confirmAction = () => {
-    if (selectedOrg && actionType) {
-      updateOrganizationMutation.mutate({
-        orgId: selectedOrg.id,
-        action: actionType
-      });
-    }
   };
 
   const getStatusChip = (status: string) => {
@@ -154,9 +103,15 @@ const LicenseManagement: React.FC = () => {
       <Paper sx={{ mb: 3, p: 2 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <Security sx={{ mr: 1 }} />
-          Organization Licenses Overview
+          License Creation Overview
         </Typography>
         <Divider sx={{ mb: 2 }} />
+        
+        <Alert severity="info" sx={{ mb: 2 }}>
+          License Management is restricted to license creation and viewing only. 
+          For organization management, password resets, and data operations, use 
+          <strong> Manage Organizations</strong>.
+        </Alert>
         
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
@@ -281,33 +236,6 @@ const LicenseManagement: React.FC = () => {
                     >
                       <Visibility />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleAction(org, 'reset')}
-                      title="Reset Password"
-                    >
-                      <RestartAlt />
-                    </IconButton>
-                    {org.status === 'active' ? (
-                      <IconButton
-                        size="small"
-                        color="warning"
-                        onClick={() => handleAction(org, 'hold')}
-                        title="Hold Access"
-                      >
-                        <Lock />
-                      </IconButton>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        color="success"
-                        onClick={() => handleAction(org, 'activate')}
-                        title="Activate"
-                      >
-                        <LockOpen />
-                      </IconButton>
-                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -322,37 +250,6 @@ const LicenseManagement: React.FC = () => {
         onClose={() => setCreateDialogOpen(false)}
         onSuccess={handleCreateLicense}
       />
-
-      {/* Action Confirmation Dialog */}
-      <Dialog open={actionDialogOpen} onClose={() => setActionDialogOpen(false)}>
-        <DialogTitle>
-          Confirm {actionType === 'hold' ? 'Hold Access' : 
-                   actionType === 'activate' ? 'Activate' : 'Reset Password'}
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to {actionType === 'hold' ? 'hold access for' : 
-                                     actionType === 'activate' ? 'activate' : 'reset password for'} 
-            <strong> {selectedOrg?.name}</strong>?
-          </Typography>
-          {actionType === 'reset' && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              A new temporary password will be generated and sent to the organization admin.
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setActionDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={confirmAction} 
-            variant="contained"
-            color={actionType === 'hold' ? 'warning' : 'primary'}
-            disabled={updateOrganizationMutation.isLoading}
-          >
-            {updateOrganizationMutation.isLoading ? 'Processing...' : 'Confirm'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

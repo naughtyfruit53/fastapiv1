@@ -49,7 +49,7 @@ const AppSuperAdminDashboard: React.FC = () => {
   const fetchAppStatistics = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/organizations/app-statistics', {
+      const response = await fetch('/api/organizations/app-statistics', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

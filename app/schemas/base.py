@@ -198,7 +198,7 @@ class PasswordChangeResponse(BaseModel):
 
 class UserBase(BaseModel):
     email: EmailStr
-    username: str
+    username: Optional[str] = None  # Made optional - will be auto-generated from email
     full_name: Optional[str] = None
     role: UserRole = UserRole.STANDARD_USER
     department: Optional[str] = None
@@ -216,10 +216,17 @@ class UserCreate(UserBase):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters long')
         return v
+    
+    def __init__(self, **data):
+        """Auto-generate username from email if not provided"""
+        if 'username' not in data or not data['username']:
+            if 'email' in data:
+                data['username'] = data['email'].split("@")[0]
+        super().__init__(**data)
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    username: Optional[str] = None
+    username: Optional[str] = None  # Will be auto-updated if email changes
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     department: Optional[str] = None

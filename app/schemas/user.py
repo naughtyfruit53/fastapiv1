@@ -23,7 +23,7 @@ class PlatformUserRole(str, Enum):
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr
-    username: str
+    username: Optional[str] = None  # Made optional - will be auto-generated from email
     full_name: Optional[str] = None
     role: UserRole = UserRole.STANDARD_USER
     department: Optional[str] = None
@@ -43,11 +43,16 @@ class UserCreate(UserBase):
         if not is_strong:
             raise ValueError(msg)
         return v
+    
+    def model_post_init(self, __context):
+        """Auto-generate username from email if not provided"""
+        if not self.username and self.email:
+            self.username = self.email.split("@")[0]
 
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    username: Optional[str] = None
+    username: Optional[str] = None  # Will be auto-updated if email changes
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     department: Optional[str] = None

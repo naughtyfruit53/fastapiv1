@@ -33,7 +33,6 @@ const AddUser: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
-    username: '',
     full_name: '',
     password: '',
     role: 'standard_user',
@@ -85,7 +84,7 @@ const AddUser: React.FC = () => {
     setSuccess(null);
 
     // Basic validation
-    if (!formData.email || !formData.username || !formData.full_name || !formData.password) {
+    if (!formData.email || !formData.full_name || !formData.password) {
       setError('Please fill in all required fields');
       return;
     }
@@ -109,7 +108,6 @@ const AddUser: React.FC = () => {
   const resetForm = () => {
     setFormData({
       email: '',
-      username: '',
       full_name: '',
       password: '',
       role: 'standard_user',
@@ -180,19 +178,8 @@ const AddUser: React.FC = () => {
               value={formData.email}
               onChange={handleInputChange('email')}
               required
-              helperText="User's login email address"
+              helperText="User's login email address (username will be auto-generated)"
             />
-            <TextField
-              fullWidth
-              label="Username *"
-              value={formData.username}
-              onChange={handleInputChange('username')}
-              required
-              helperText="Unique username for login"
-            />
-          </Box>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
             <TextField
               fullWidth
               label="Full Name *"
@@ -200,6 +187,9 @@ const AddUser: React.FC = () => {
               onChange={handleInputChange('full_name')}
               required
             />
+          </Box>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
             <TextField
               fullWidth
               label="Password *"
@@ -209,10 +199,6 @@ const AddUser: React.FC = () => {
               required
               helperText="Minimum 8 characters"
             />
-          </Box>
-
-          {/* Role and Department */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Role *</InputLabel>
               <Select
@@ -227,37 +213,38 @@ const AddUser: React.FC = () => {
                 )}
               </Select>
             </FormControl>
-            <TextField
-              fullWidth
-              label="Department"
-              value={formData.department}
-              onChange={handleInputChange('department')}
-            />
           </Box>
 
           {/* Additional Information */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <TextField
               fullWidth
+              label="Department"
+              value={formData.department}
+              onChange={handleInputChange('department')}
+            />
+            <TextField
+              fullWidth
               label="Designation"
               value={formData.designation}
               onChange={handleInputChange('designation')}
             />
+          </Box>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <TextField
               fullWidth
               label="Employee ID"
               value={formData.employee_id}
               onChange={handleInputChange('employee_id')}
             />
+            <TextField
+              fullWidth
+              label="Phone"
+              value={formData.phone}
+              onChange={handleInputChange('phone')}
+            />
           </Box>
-
-          <TextField
-            fullWidth
-            label="Phone"
-            value={formData.phone}
-            onChange={handleInputChange('phone')}
-            sx={{ mb: 4 }}
-          />
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
