@@ -6,6 +6,7 @@ export interface User {
   role: string;
   is_super_admin?: boolean;
   organization_id?: number;
+  must_change_password?: boolean;
   // Add other fields
 }
 
