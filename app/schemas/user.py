@@ -71,7 +71,7 @@ class UserInDB(UserBase):
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Added use_enum_values=True
 
 
 class UserLogin(BaseModel):
@@ -90,6 +90,7 @@ class Token(BaseModel):
     force_password_reset: bool = False
     is_first_login: bool = False
     company_details_completed: bool = True
+    model_config = ConfigDict(use_enum_values=True)  # Added for enum serialization
 
 
 class TokenData(BaseModel):
@@ -132,7 +133,7 @@ class PlatformUserInDB(PlatformUserBase):
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes = True, use_enum_values=True)
 
 
 # Password management schemas

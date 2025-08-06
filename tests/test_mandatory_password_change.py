@@ -9,6 +9,7 @@ from app.core.database import get_db, Base
 from app.models.base import Organization, User
 from app.core.security import get_password_hash, verify_password
 from app.schemas.user import UserRole
+from app.core.seed_super_admin import seed_super_admin, check_super_admin_exists
 
 # Test database URL (use SQLite for testing)
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_mandatory_password.db"
@@ -101,6 +102,15 @@ def test_user_roles():
     """Test that user roles are properly defined"""
     assert UserRole.SUPER_ADMIN == "super_admin"
     assert UserRole.STANDARD_USER == "standard_user"
+
+def test_super_admin_seeding_sets_mandatory_change(test_db):
+    """Test that seeded super admin has must_change_password set to True"""
+    seed_super_admin(db=test_db)
+    assert check_super_admin_exists(db=test_db) == True
+    super_admin = test_db.query(User).filter(User.is_super_admin == True).first()
+    assert super_admin is not None
+    assert super_admin.must_change_password == True
+    assert verify_password("123456", super_admin.hashed_password)
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

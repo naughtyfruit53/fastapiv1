@@ -179,7 +179,9 @@ async def login_for_access_token(
             "user_id": user.id,
             "email": user.email,
             "organization_id": user.organization_id,
-            "must_change_password": user.must_change_password
+            "must_change_password": user.must_change_password,
+            "role": user.role,
+            "is_super_admin": user.is_super_admin
         }
         
     except HTTPException:
@@ -342,7 +344,9 @@ async def login_with_email(
             "user_id": user.id,
             "email": user.email,
             "organization_id": user.organization_id,
-            "must_change_password": user.must_change_password
+            "must_change_password": user.must_change_password,
+            "role": user.role,
+            "is_super_admin": user.is_super_admin
         }
         
     except HTTPException:

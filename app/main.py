@@ -5,13 +5,14 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
-from app.api import users, companies, vendors, customers, products, stock, organizations, reports, platform, settings, pincode
+from app.api import users, companies, vendors, customers, products, stock, reports, platform, settings, pincode
 from app.api.vouchers import router as vouchers_router
 from app.api.routes import admin
 import logging
 
 # Import enhanced v1 routers
 from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset
+from app.api.v1.organizations import router as organizations_router  # Updated import for organizations in v1
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -85,7 +86,7 @@ app.include_router(
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------
 app.include_router(platform.router, prefix=f"{config_settings.API_V1_STR}/platform", tags=["platform"])
-app.include_router(organizations.router, prefix=f"{config_settings.API_V1_STR}/organizations", tags=["organizations"])
+app.include_router(organizations_router, prefix=f"{config_settings.API_V1_STR}/organizations", tags=["organizations"])  # Updated to use organizations_router
 app.include_router(users.router, prefix=f"{config_settings.API_V1_STR}/users", tags=["users"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
 app.include_router(companies.router, prefix=f"{config_settings.API_V1_STR}/companies", tags=["companies"])

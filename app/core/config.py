@@ -70,7 +70,9 @@ class Settings(BaseSettings):
     
     model_config = ConfigDict(
         env_file=".env",
-        case_sensitive=True
+        env_file_encoding='utf-8',
+        case_sensitive=True,
+        extra='ignore'  # Ignore extra fields in .env to prevent validation errors
     )
 
 settings = Settings()

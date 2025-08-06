@@ -14,7 +14,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy import text
 from app.core.database import SessionLocal
 from app.models.base import Base, User
-from app.schemas.base import UserRole
+from app.schemas.user import UserRole  # Corrected import from schemas.user
 from app.core.security import get_password_hash
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,15 @@ def seed_super_admin(db: Session = None) -> None:
             ).first()
             
             if existing_super_admin:
-                logger.info("Platform super admin already exists. Skipping seeding.")
+                # Check and fix role if it's incorrect (integrated fix logic)
+                if existing_super_admin.role != UserRole.SUPER_ADMIN.value:
+                    logger.warning(f"Super admin role mismatch detected: current role '{existing_super_admin.role}', fixing to 'super_admin'")
+                    existing_super_admin.role = UserRole.SUPER_ADMIN.value
+                    db_session.commit()
+                    db_session.refresh(existing_super_admin)
+                    logger.info("Super admin role fixed successfully.")
+                else:
+                    logger.info("Platform super admin already exists with correct role. Skipping seeding.")
                 return
                 
         except OperationalError as e:
@@ -76,6 +84,7 @@ def seed_super_admin(db: Session = None) -> None:
             role=UserRole.SUPER_ADMIN,
             is_super_admin=True,
             is_active=True,
+            must_change_password=True,  # Force password change on first login
             organization_id=None  # Platform level
         )
         

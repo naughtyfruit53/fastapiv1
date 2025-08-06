@@ -1,4 +1,4 @@
-# Revised: app/api/organizations.py
+# Revised: v1/app/api/v1/organizations.py
 
 """
 Organization management API endpoints
@@ -10,10 +10,11 @@ from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.tenant import require_organization, TenantContext
 from app.models.base import Organization, User
+from app.schemas.user import UserRole  # Corrected import from schemas.user
 from app.schemas.base import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
     OrganizationLicenseCreate, OrganizationLicenseResponse,
-    UserCreate, UserInDB, UserRole
+    UserCreate, UserInDB
 )
 from app.api.v1.auth import get_current_user, get_current_active_user
 import logging
@@ -25,7 +26,7 @@ import requests
 from app.services.email_service import email_service  # Import for sending email
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/organizations", tags=["organizations"])
 
 # Import pincode lookup logic from pincode module
 from app.api.pincode import STATE_CODE_MAP

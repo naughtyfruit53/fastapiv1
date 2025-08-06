@@ -8,6 +8,7 @@ import { User } from '../types/user.types';  // Import User type
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  displayRole: string | null;
   login: (token: string) => Promise<void>;
   logout: () => void;
 }
@@ -18,6 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const getDisplayRole = (user: User): string => {
+    if (user.is_super_admin) {
+      return 'App SuperAdmin';
+    } else if (user.role === 'org_admin') {
+      return 'Org SuperAdmin';
+    } else if (user.role === 'admin') {
+      return 'Admin';
+    } else if (user.role === 'standard_user') {
+      return 'User';
+    } else {
+      return 'User';  // Default fallback
+    }
+  };
 
   const fetchUser = async () => {
     try {
@@ -47,6 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  // Add this useEffect to handle mandatory password change redirect
+  useEffect(() => {
+    if (user && user.must_change_password && router.pathname !== '/change-password') {
+      router.push('/change-password');
+    }
+  }, [user, router]);
+
   const login = async (token: string) => {
     localStorage.setItem('token', token);
     await fetchUser();
@@ -60,7 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      displayRole: user ? getDisplayRole(user) : null,
+      login, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
