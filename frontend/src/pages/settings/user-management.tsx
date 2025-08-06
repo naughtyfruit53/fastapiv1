@@ -212,7 +212,7 @@ const UserManagement: React.FC = () => {
 
   const handleUpdateUser = () => {
     if (selectedUser) {
-      const userData = {
+      const userData: any = {
         email: formData.email,
         username: formData.username,
         full_name: formData.full_name,

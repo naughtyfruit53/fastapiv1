@@ -1,10 +1,17 @@
 import React from 'react';
 import { Box, Button, Typography, Alert } from '@mui/material';
 import { useMutation } from 'react-query';
-import { resetService } from '../../../services/authService';  // Assume service for reset
 
 const DataManagement: React.FC = () => {
-  const factoryResetMutation = useMutation(resetService.factoryDefault, {
+  // Placeholder mutation - would need to add factoryDefault method to organizationService
+  const factoryResetMutation = useMutation(() => 
+    fetch('/api/v1/organizations/factory-default', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }).then(res => res.json()), {
     onSuccess: () => alert('Factory default reset completed. All data has been erased.'),
   });
 
