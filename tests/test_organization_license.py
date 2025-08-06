@@ -79,7 +79,7 @@ def test_create_organization_license_success(client, auth_headers):
     }
     
     response = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data,
         headers=auth_headers
     )
@@ -115,7 +115,7 @@ def test_create_organization_license_duplicate_name(client, auth_headers, test_d
     }
     
     response = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data,
         headers=auth_headers
     )
@@ -144,7 +144,7 @@ def test_create_organization_license_duplicate_email(client, auth_headers, test_
     }
     
     response = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data,
         headers=auth_headers
     )
@@ -160,7 +160,7 @@ def test_create_organization_license_unauthorized(client):
     }
     
     response = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data
     )
     
@@ -174,7 +174,7 @@ def test_create_organization_license_invalid_data(client, auth_headers):
     }
     
     response = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data,
         headers=auth_headers
     )
@@ -190,7 +190,7 @@ def test_organization_subdomain_generation(client, auth_headers):
     }
     
     response1 = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data1,
         headers=auth_headers
     )
@@ -205,7 +205,7 @@ def test_organization_subdomain_generation(client, auth_headers):
     }
     
     response2 = client.post(
-        "/api/v1/organizations/license/create",
+        "/api/organizations/license/create",
         json=license_data2,
         headers=auth_headers
     )

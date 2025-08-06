@@ -26,7 +26,7 @@ import requests
 from app.services.email_service import email_service  # Import for sending email
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/organizations", tags=["organizations"])
+router = APIRouter(tags=["organizations"])
 
 # Import pincode lookup logic from pincode module
 from app.api.pincode import STATE_CODE_MAP
