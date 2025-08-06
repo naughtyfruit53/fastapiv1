@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import { authService } from '../services/authService';
-import { User } from '../types/user.types';  // Import User type
+import { User, getDisplayRole } from '../types/user.types';  // Import getDisplayRole from centralized location
 
 interface AuthContextType {
   user: User | null;
@@ -19,20 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  const getDisplayRole = (user: User): string => {
-    if (user.is_super_admin) {
-      return 'App SuperAdmin';
-    } else if (user.role === 'org_admin') {
-      return 'Org SuperAdmin';
-    } else if (user.role === 'admin') {
-      return 'Admin';
-    } else if (user.role === 'standard_user') {
-      return 'User';
-    } else {
-      return 'User';  // Default fallback
-    }
-  };
 
   const fetchUser = async () => {
     try {
@@ -85,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      displayRole: user ? getDisplayRole(user) : null,
+      displayRole: user ? getDisplayRole(user.role, user.is_super_admin) : null,
       login, 
       logout 
     }}>

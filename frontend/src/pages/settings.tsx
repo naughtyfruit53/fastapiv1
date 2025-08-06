@@ -1,3 +1,25 @@
+/**
+ * Settings Page Component
+ * 
+ * This component provides the main settings interface for users with different roles.
+ * It uses centralized role and permission functions from user.types.ts to ensure
+ * consistent behavior across the application.
+ * 
+ * Role Display:
+ * - Uses getDisplayRole(user.role, user.is_super_admin) for consistent role naming
+ * - Prioritizes is_super_admin flag over role string for App Super Admin detection
+ * 
+ * Permission Checks:
+ * - isAppSuperAdmin(user): Determines if user is an app-level super admin
+ * - canFactoryReset(user): Determines if user can perform reset operations  
+ * - canManageUsers(user): Determines if user can manage other users
+ * 
+ * Features shown based on permissions:
+ * - App Super Admin: All features including cross-org management
+ * - Org Admin: Organization-level management and reset options
+ * - Standard User: Basic profile and company detail access only
+ */
+
 import React, { useState } from 'react';
 import {
   Box,
@@ -24,9 +46,12 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { getDisplayRole, isAppSuperAdmin, canFactoryReset, canManageUsers } from '../types/user.types';
 
 export default function Settings() {
   const router = useRouter();
+  const { user } = useAuth();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [factoryResetDialogOpen, setFactoryResetDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,17 +59,15 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Get user info from localStorage or context
+  // Get token for API calls
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-  const organizationName = typeof window !== 'undefined' ? localStorage.getItem('organizationName') : null;
   
-  // Improved role detection
-  const isSuperAdmin = userRole === 'super_admin';
-  const isOrgAdmin = userRole === 'org_admin';
-  const isAdmin = userRole === 'admin';
-  const canManageUsers = isOrgAdmin || isSuperAdmin;
-  const canResetData = isOrgAdmin || isSuperAdmin;
+  // Use centralized permission and role functions
+  const displayRole = getDisplayRole(user?.role || '', user?.is_super_admin);
+  const isSuperAdmin = isAppSuperAdmin(user);
+  const canReset = canFactoryReset(user);
+  const canManage = canManageUsers(user);
+  const organizationName = typeof window !== 'undefined' ? localStorage.getItem('organizationName') : null;
 
   const handleResetData = async () => {
     setLoading(true);
@@ -123,9 +146,9 @@ export default function Settings() {
       {/* User Role Information */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.main', color: 'info.contrastText' }}>
         <Typography variant="body1">
-          <strong>Current Role:</strong> {userRole || 'User'} {organizationName && `• Organization: ${organizationName}`}
+          <strong>Current Role:</strong> {displayRole} {organizationName && `• Organization: ${organizationName}`}
         </Typography>
-        {canManageUsers && (
+        {canManage && (
           <Typography variant="body2" sx={{ mt: 1 }}>
             You have administrative privileges to manage users and organization settings.
           </Typography>
@@ -171,7 +194,7 @@ export default function Settings() {
             </Button>
 
             {/* User Management for Organization Admins */}
-            {canManageUsers && (
+            {canManage && (
               <>
                 <Button
                   variant="contained"
@@ -197,7 +220,7 @@ export default function Settings() {
         </Grid>
 
         {/* Data Management */}
-        {canResetData && (
+        {canReset && (
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -229,8 +252,8 @@ export default function Settings() {
                 )}
               </Button>
 
-              {/* Factory Default Button for Organization Admins */}
-              {isOrgAdmin && (
+              {/* Factory Default Button for Organization Admins and Super Admins */}
+              {canReset && (
                 <Button
                   variant="outlined"
                   color="warning"
@@ -249,12 +272,12 @@ export default function Settings() {
 
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                 {isSuperAdmin 
-                  ? 'As super admin, this will reset all organization data'
+                  ? 'As app super admin, this will reset all organization data'
                   : 'Reset data: removes all business data but keeps organization settings'
                 }
               </Typography>
 
-              {isOrgAdmin && (
+              {canReset && (
                 <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                   Factory Default: Resets organization to initial state with default settings
                 </Typography>
@@ -364,9 +387,9 @@ export default function Settings() {
           <Box component="ul" sx={{ mt: 2, mb: 2 }}>
             <li>All business data will be deleted (same as data reset)</li>
             <li>Organization settings will be reset to defaults</li>
-            <li>Business type will be set to "Other"</li>
-            <li>Timezone will be set to "Asia/Kolkata"</li>
-            <li>Currency will be set to "INR"</li>
+            <li>Business type will be set to &quot;Other&quot;</li>
+            <li>Timezone will be set to &quot;Asia/Kolkata&quot;</li>
+            <li>Currency will be set to &quot;INR&quot;</li>
             <li>Company details status will be reset</li>
           </Box>
           <DialogContentText color="warning.main">

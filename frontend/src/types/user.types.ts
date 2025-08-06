@@ -1,3 +1,20 @@
+/**
+ * User Types and Permission Utilities
+ * 
+ * This module provides centralized user type definitions and permission checking
+ * functions to ensure consistent role-based access control across the application.
+ * 
+ * Key principles:
+ * 1. The is_super_admin flag takes precedence over role strings for app-level admin detection
+ * 2. Role display names are standardized through getDisplayRole function
+ * 3. Permission functions provide clear, reusable access control logic
+ * 
+ * Usage:
+ * - Always use getDisplayRole() for showing user roles in UI
+ * - Use isAppSuperAdmin() instead of checking role === 'super_admin' 
+ * - Use specific permission functions (canFactoryReset, canManageUsers) for feature access
+ */
+
 // Revised: v1/frontend/src/types/user.types.ts
 
 export interface User {
@@ -6,6 +23,7 @@ export interface User {
   role: string;
   is_super_admin?: boolean;
   organization_id?: number;
+  must_change_password?: boolean;
   // Add other fields
 }
 
