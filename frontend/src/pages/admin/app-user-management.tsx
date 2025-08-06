@@ -93,7 +93,7 @@ const AppUserManagement: React.FC = () => {
   const fetchAppUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/app-users/', {
+      const response = await fetch('/api/app-users/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -116,7 +116,7 @@ const AppUserManagement: React.FC = () => {
   const handleCreateUser = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/app-users/', {
+      const response = await fetch('/api/app-users/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -151,7 +151,7 @@ const AppUserManagement: React.FC = () => {
   const handleToggleUserStatus = async (userId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/app-users/${userId}/toggle-status`, {
+      const response = await fetch(`/api/app-users/${userId}/toggle-status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -173,7 +173,7 @@ const AppUserManagement: React.FC = () => {
   const handleResetPassword = async (userId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/app-users/${userId}/reset-password`, {
+      const response = await fetch(`/api/app-users/${userId}/reset-password`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +198,7 @@ const AppUserManagement: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/app-users/${selectedUser.id}`, {
+      const response = await fetch(`/api/app-users/${selectedUser.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
