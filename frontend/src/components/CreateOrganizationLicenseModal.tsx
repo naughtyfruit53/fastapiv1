@@ -30,7 +30,6 @@ interface LicenseFormData {
   organization_name: string;
   superadmin_email: string;
   primary_phone: string;
-  admin_password: string;
   address: string;
   pin_code: string;
   city: string;
@@ -167,7 +166,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       organization_name: data.organization_name.trim(),
       superadmin_email: data.superadmin_email.trim(),
       primary_phone: data.primary_phone?.trim(),
-      admin_password: data.admin_password?.trim() || undefined, // Let backend generate if empty
       address: data.address.trim(),
       pin_code: data.pin_code.trim(),
       city: data.city.trim(),
@@ -228,9 +226,9 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
 
           {!success && (
             <form onSubmit={handleSubmit(onSubmit)}>
-              {/* Row 1: Organization Name & Primary Phone */}
+              {/* Row 1: Organization Name (full width) */}
               <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Organization Name"
@@ -246,26 +244,9 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     disabled={loading}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Primary Phone"
-                    {...register('primary_phone', {
-                      required: 'Primary phone is required',
-                      pattern: {
-                        value: /^[\+]?[0-9\-\s\(\)]{10,15}$/,
-                        message: 'Enter a valid phone number'
-                      }
-                    })}
-                    error={!!errors.primary_phone}
-                    helperText={errors.primary_phone?.message}
-                    disabled={loading}
-                    placeholder="+91-1234567890"
-                  />
-                </Grid>
               </Grid>
 
-              {/* Row 2: Primary/Login Email & Admin Password */}
+              {/* Row 2: Primary/Login Email & Primary Phone */}
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12} sm={6}>
                   <TextField
@@ -287,17 +268,18 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Admin Password"
-                    type="password"
-                    {...register('admin_password', {
-                      minLength: {
-                        value: 8,
-                        message: 'Password must be at least 8 characters'
+                    label="Primary Phone"
+                    {...register('primary_phone', {
+                      required: 'Primary phone is required',
+                      pattern: {
+                        value: /^[\+]?[0-9\-\s\(\)]{10,15}$/,
+                        message: 'Enter a valid phone number'
                       }
                     })}
-                    error={!!errors.admin_password}
-                    helperText={errors.admin_password?.message || 'Leave blank to auto-generate password'}
+                    error={!!errors.primary_phone}
+                    helperText={errors.primary_phone?.message}
                     disabled={loading}
+                    placeholder="+91-1234567890"
                   />
                 </Grid>
               </Grid>
@@ -414,7 +396,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 <Typography variant="body2" color="text.secondary">
                   This will create a new organization with a trial license and a superadmin user account.
                   City, state, and state code will be auto-populated from the pin code but remain editable.
-                  A confirmation email will be sent with login details.
+                  A temporary password will be auto-generated and sent to the provided email address.
                 </Typography>
               </Box>
             </form>

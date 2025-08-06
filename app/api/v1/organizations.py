@@ -521,82 +521,25 @@ async def get_organization_by_subdomain(
 
 @router.post("/reset-data")
 async def reset_organization_data(
-    organization_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Reset organization data (Organization Admin) or all data (Super Admin)"""
+    """Reset All Data - Organization Super Admin only (removes business data, keeps users and org settings)"""
     from app.services.reset_service import ResetService
     
     try:
-        if current_user.is_super_admin:
-            # Super admin can reset all data or specific organization
-            if organization_id:
-                # Reset specific organization
-                org = db.query(Organization).filter(Organization.id == organization_id).first()
-                if not org:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Organization not found"
-                    )
-                result = ResetService.factory_reset_organization_data(db, organization_id)
-                logger.info(f"Super admin {current_user.email} reset data for organization {org.name}")
-                return {
-                    "message": f"Data reset successfully for organization: {org.name}",
-                    "details": result["deleted"]
-                }
-            else:
-                # Reset all data
-                result = ResetService.reset_all_data(db)
-                logger.info(f"Super admin {current_user.email} reset all data")
-                return {
-                    "message": "All system data has been reset successfully",
-                    "details": result["deleted"]
-                }
-        elif current_user.role in [UserRole.ORG_ADMIN] and current_user.organization_id:
-            # Organization admin can reset their organization data only
-            org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
-            result = ResetService.factory_reset_organization_data(db, current_user.organization_id)
-            logger.info(f"Org admin {current_user.email} reset data for their organization {org.name}")
-            return {
-                "message": f"Organization data has been reset successfully for: {org.name}", 
-                "details": result["deleted"]
-            }
-        else:
+        # Only organization admins can perform "Reset All Data"
+        if current_user.role not in [UserRole.ORG_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to reset data. Only organization administrators and super administrators can reset data."
+                detail="Only organization super administrators can reset organization data"
             )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error resetting data: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reset data. Please try again."
-        )
-
-@router.post("/factory-default")
-async def factory_default_organization(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Factory Default: Reset organization to default state (Organization Admin only)"""
-    # Only organization admins can perform factory default
-    if current_user.role not in [UserRole.ORG_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can perform factory default reset"
-        )
-    
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
-        )
-    
-    try:
-        from app.services.reset_service import ResetService
+        
+        if not current_user.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not associated with any organization"
+            )
         
         org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
         if not org:
@@ -605,37 +548,52 @@ async def factory_default_organization(
                 detail="Organization not found"
             )
         
-        # Reset organization data to factory defaults
-        result = ResetService.factory_reset_organization_data(db, current_user.organization_id)
-        
-        # Reset organization settings to defaults
-        org.business_type = "Other"
-        org.industry = None
-        org.website = None
-        org.description = None
-        org.timezone = "Asia/Kolkata"
-        org.currency = "INR"
-        org.date_format = "DD/MM/YYYY"
-        org.financial_year_start = "04/01"
-        org.company_details_completed = False
-        org.features = {}
-        
-        db.commit()
-        db.refresh(org)
-        
-        logger.info(f"Org admin {current_user.email} performed factory default reset for organization {org.name}")
+        # Reset organization business data only (keep users and org settings)
+        result = ResetService.reset_organization_business_data(db, current_user.organization_id)
+        logger.info(f"Org admin {current_user.email} reset business data for organization {org.name}")
         
         return {
-            "message": f"Organization '{org.name}' has been reset to factory defaults successfully",
+            "message": f"All business data has been reset for organization: {org.name}",
             "organization_name": org.name,
             "details": result.get("deleted", {}),
-            "reset_settings": {
-                "business_type": "Other",
-                "timezone": "Asia/Kolkata", 
-                "currency": "INR",
-                "date_format": "DD/MM/YYYY",
-                "financial_year_start": "04/01"
-            }
+            "note": "Users and organization settings have been preserved"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting organization data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset organization data. Please try again."
+        )
+
+@router.post("/factory-default")
+async def factory_default_system(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Factory Default - App Super Admin only (complete system reset)"""
+    # Only app super admins can perform factory default
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only app super administrators can perform factory default reset"
+        )
+    
+    try:
+        from app.services.reset_service import ResetService
+        
+        # Perform complete system reset - all organizations, users, data
+        result = ResetService.factory_default_system(db)
+        
+        logger.warning(f"FACTORY DEFAULT: App super admin {current_user.email} performed complete system reset")
+        
+        return {
+            "message": "System has been reset to factory defaults successfully",
+            "warning": "All organizations, users, and data have been permanently deleted",
+            "details": result.get("deleted", {}),
+            "system_state": "restored_to_initial_configuration"
         }
         
     except HTTPException:

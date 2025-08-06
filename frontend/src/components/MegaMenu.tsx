@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
+import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
 
 interface MegaMenuProps {
   user?: any;
@@ -121,8 +122,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     handleMenuClose();
   };
 
-  // Check if user is superadmin
-  const isSuperAdmin = user?.email === 'naughtyfruit53@gmail.com' || user?.is_super_admin;
+  // Check user roles using proper utility functions
+  const isSuperAdmin = isAppSuperAdmin(user);
+  const isOrgAdmin = isOrgSuperAdmin(user);
+  const canManage = canManageUsers(user);
 
   // Enhanced logo navigation function
   const navigateToHome = () => {
@@ -381,7 +384,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               Settings
             </Button>
 
-            {/* Superadmin Menu Options */}
+            {/* App Super Admin Only - License Management and Demo */}
             {isSuperAdmin && (
               <>
                 <Button
@@ -399,6 +402,28 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   sx={{ mx: 1 }}
                 >
                   Demo
+                </Button>
+              </>
+            )}
+
+            {/* Organization Super Admin Only - User Management */}
+            {isOrgAdmin && (
+              <>
+                <Button
+                  color="inherit"
+                  startIcon={<People />}
+                  onClick={() => router.push('/settings/user-management')}
+                  sx={{ mx: 1 }}
+                >
+                  Manage Users
+                </Button>
+                <Button
+                  color="inherit"
+                  startIcon={<AddBusiness />}
+                  onClick={() => router.push('/settings/add-user')}
+                  sx={{ mx: 1 }}
+                >
+                  Add User
                 </Button>
               </>
             )}
