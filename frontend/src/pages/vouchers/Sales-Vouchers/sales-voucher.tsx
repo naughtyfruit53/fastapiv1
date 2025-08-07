@@ -7,6 +7,8 @@ import { Add, Remove, Edit, Visibility } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { voucherService } from '../../../services/authService';
 import { getCustomers, getProducts } from '../../../services/masterService';
+import ProductAutocomplete from '../../../components/ProductAutocomplete';
+import CustomerAutocomplete from '../../../components/CustomerAutocomplete';
 
 const numberToWordsInteger = (num: number): string => {
   if (num === 0) return '';
@@ -240,19 +242,15 @@ const SalesVoucherPage: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <Select
-                    fullWidth
-                    {...control.register('customer', { required: true })}
+                  <CustomerAutocomplete
+                    value={watch('customer')}
+                    onChange={(customer) => setValue('customer', customer?.id?.toString() || '')}
                     error={!!errors.customer}
+                    helperText={errors.customer ? 'Customer is required' : ''}
                     disabled={isViewMode}
-                    displayEmpty
-                  >
-                    <MenuItem value="" disabled>Select Customer</MenuItem>
-                    {customerList?.map((customer: any) => (
-                      <MenuItem key={customer.id} value={customer.id}>{customer.name}</MenuItem>
-                    ))}
-                  </Select>
-                  {errors.customer && <Typography color="error" variant="caption">Required</Typography>}
+                    label="Customer"
+                    placeholder="Search or add customer..."
+                  />
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
@@ -267,19 +265,23 @@ const SalesVoucherPage: React.FC = () => {
                   {fields.map((field, index) => (
                     <Grid container spacing={2} key={field.id} sx={{ mb: 2 }}>
                       <Grid item xs={3}>
-                        <Select
-                          fullWidth
-                          {...control.register(`items.${index}.name`, { required: true })}
+                        <ProductAutocomplete
+                          value={watch(`items.${index}.name`)}
+                          onChange={(product) => {
+                            setValue(`items.${index}.name`, product?.name || '');
+                            if (product) {
+                              setValue(`items.${index}.hsn_code`, product.hsn_code || '');
+                              setValue(`items.${index}.unit_price`, product.unit_price || 0);
+                              setValue(`items.${index}.gst`, product.gst_rate || 0);
+                              setValue(`items.${index}.unit`, product.unit || '');
+                            }
+                          }}
                           error={!!errors.items?.[index]?.name}
+                          helperText={errors.items?.[index]?.name ? 'Product is required' : ''}
                           disabled={isViewMode}
-                          displayEmpty
-                        >
-                          <MenuItem value="" disabled>Select Product</MenuItem>
-                          {productList?.map((product: any) => (
-                            <MenuItem key={product.id} value={product.product_name}>{product.product_name}</MenuItem>
-                          ))}
-                        </Select>
-                        {errors.items?.[index]?.name && <Typography color="error" variant="caption">Required</Typography>}
+                          label="Product"
+                          placeholder="Search or add product..."
+                        />
                       </Grid>
                       <Grid item xs={2}>
                         <TextField
