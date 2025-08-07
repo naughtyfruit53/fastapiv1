@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 # Import enhanced v1 routers
 from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
+# Added missing v1 imports
+from app.api.v1 import admin_setup as v1_admin_setup, login as v1_login, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
 # Updated import for organizations in v1
 try:
     from app.api.v1.organizations import router as organizations_router
@@ -25,12 +27,34 @@ except Exception as import_error:
     logger.error(f"Failed to import organizations_router: {str(import_error)}")
     raise
 
+# Add try/except for failing routers to log import errors
+try:
+    from app.api import companies
+    logger.info("Successfully imported companies_router")
+except Exception as import_error:
+    logger.error(f"Failed to import companies_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api import products
+    logger.info("Successfully imported products_router")
+except Exception as import_error:
+    logger.error(f"Failed to import products_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import stock as v1_stock
+    logger.info("Successfully imported stock_router")
+except Exception as import_error:
+    logger.error(f"Failed to import stock_router: {str(import_error)}")
+    raise
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
     version=config_settings.VERSION,
     description=config_settings.DESCRIPTION,
-    openapi_url=f"{config_settings.API_V1_STR}/openapi.json"
+    openapi_url="/api/v1/openapi.json"
 )
 
 # Add tenant middleware for multi-tenancy
@@ -75,46 +99,78 @@ async def log_cors_config():
 # })
 app.include_router(
     v1_auth.router, 
-    prefix=f"{config_settings.API_V1_STR}/auth", 
+    prefix="/api/v1/auth", 
     tags=["authentication-v1"]
 )
 app.include_router(
     v1_admin.router, 
-    prefix=f"{config_settings.API_V1_STR}/admin", 
+    prefix="/api/v1/admin", 
     tags=["admin-v1"]
 )
 app.include_router(
     v1_reset.router, 
-    prefix=f"{config_settings.API_V1_STR}/reset", 
+    prefix="/api/v1/reset", 
     tags=["reset-v1"]
 )
 app.include_router(
     v1_app_users.router,
-    prefix=f"{config_settings.API_V1_STR}/app-users",
+    prefix="/api/v1/app-users",
     tags=["app-user-management"]
+)
+
+# Added includes for missing v1 routers with consistent /api/v1 prefixes
+app.include_router(
+    v1_admin_setup.router,
+    prefix="/api/v1/admin-setup",
+    tags=["admin-setup-v1"]
+)
+app.include_router(
+    v1_login.router,
+    prefix="/api/v1/login",
+    tags=["login-v1"]
+)
+app.include_router(
+    v1_master_auth.router,
+    prefix="/api/v1/master-auth",
+    tags=["master-auth-v1"]
+)
+app.include_router(
+    v1_otp.router,
+    prefix="/api/v1/otp",
+    tags=["otp-v1"]
+)
+app.include_router(
+    v1_password.router,
+    prefix="/api/v1/password",
+    tags=["password-v1"]
+)
+app.include_router(
+    v1_user.router,
+    prefix="/api/v1/user",
+    tags=["v1-user"]
 )
 
 # ------------------------------------------------------------------------------
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------
-app.include_router(platform.router, prefix=f"{config_settings.API_V1_STR}/platform", tags=["platform"])
+app.include_router(platform.router, prefix="/api/v1/platform", tags=["platform"])
 try:
     app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
     logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
 except Exception as e:
     logger.error(f"Error including organizations router: {str(e)}")
 
-app.include_router(users.router, prefix=f"{config_settings.API_V1_STR}/users", tags=["users"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
-app.include_router(companies.router, prefix=f"{config_settings.API_V1_STR}/companies", tags=["companies"])
-app.include_router(vendors.router, prefix=f"{config_settings.API_V1_STR}/vendors", tags=["vendors"])
-app.include_router(customers.router, prefix=f"{config_settings.API_V1_STR}/customers", tags=["customers"])
-app.include_router(products.router, prefix=f"{config_settings.API_V1_STR}/products", tags=["products"])
+app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
+app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["vendors"])
+app.include_router(customers.router, prefix="/api/v1/customers", tags=["customers"])
+app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
 app.include_router(v1_stock.router, prefix="/api/v1/stock", tags=["stock"])  # Updated to use v1 stock module
-app.include_router(vouchers_router, prefix=f"{config_settings.API_V1_STR}/vouchers", tags=["vouchers"])
-app.include_router(reports.router, prefix=f"{config_settings.API_V1_STR}/reports", tags=["reports"])
-app.include_router(settings.router, prefix=f"{config_settings.API_V1_STR}/settings", tags=["settings"])
-app.include_router(pincode.router, prefix=f"{config_settings.API_V1_STR}/pincode", tags=["pincode"])
+app.include_router(vouchers_router, prefix="/api/v1/vouchers", tags=["vouchers"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
+app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(pincode.router, prefix="/api/v1/pincode", tags=["pincode"])
 
 @app.on_event("startup")
 async def startup_event():

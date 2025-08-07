@@ -13,12 +13,16 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
+// Add token and organization ID to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const orgId = localStorage.getItem('org_id');
+    if (orgId) {
+      config.headers['X-Organization-ID'] = orgId;
     }
     return config;
   },
@@ -33,6 +37,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('org_id');
       window.location.href = '/';
     }
     

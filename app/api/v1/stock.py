@@ -638,3 +638,5 @@ async def export_stock_excel(
     
     excel_data = StockExcelService.export_stock(stock_data)
     return ExcelService.create_streaming_response(excel_data, "stock_export.xlsx")
+
+logger.info("Stock router loaded")

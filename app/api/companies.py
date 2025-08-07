@@ -342,3 +342,5 @@ async def import_companies_excel(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing import: {str(e)}"
         )
+
+logger.info("Companies router loaded")
