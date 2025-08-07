@@ -313,6 +313,47 @@ export const masterDataService = {
       throw new Error(error.userMessage || 'Failed to bulk import stock');
     }
   },
+  downloadStockTemplate: async () => {
+    try {
+      const response = await api.get('/v1/stock/template/excel', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'stock_template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to download stock template');
+    }
+  },
+  exportStock: async (params?: any) => {
+    try {
+      const response = await api.get('/v1/stock/export/excel', {
+        params,
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'stock_export.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to export stock');
+    }
+  },
 };
 
 export const companyService = {
