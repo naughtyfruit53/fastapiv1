@@ -2,7 +2,7 @@
 
 # Revised api/stock.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -29,6 +29,8 @@ async def get_stock(
     limit: int = 100,
     product_id: int = None,
     low_stock_only: bool = False,
+    search: str = Query("", description="Search term for stock items"),
+    show_zero: bool = Query(False, description="Show items with zero quantity"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -46,6 +48,12 @@ async def get_stock(
     if low_stock_only:
         # Filter for products where stock quantity <= reorder level
         query = query.filter(Stock.quantity <= Product.reorder_level)
+    
+    if search:
+        query = query.filter(Product.name.ilike(f"%{search}%"))
+    
+    if not show_zero:
+        query = query.filter(Stock.quantity > 0)
     
     stock_product_pairs = query.offset(skip).limit(limit).all()
     
@@ -638,5 +646,3 @@ async def export_stock_excel(
     
     excel_data = StockExcelService.export_stock(stock_data)
     return ExcelService.create_streaming_response(excel_data, "stock_export.xlsx")
-
-logger.info("Stock router loaded")

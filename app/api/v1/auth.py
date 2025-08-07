@@ -37,6 +37,8 @@ router.include_router(otp_router, prefix="/otp", tags=["otp-authentication"])
 router.include_router(master_auth_router, prefix="/master-password", tags=["master-authentication"])
 router.include_router(admin_setup_router, prefix="/admin", tags=["admin-setup"])
 
+logger.info("All subrouters included in auth router")
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 # Enhanced dependency to get current user from token with strict organization scoping

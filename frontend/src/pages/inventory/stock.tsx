@@ -27,7 +27,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  InputAdornment,
+  Stack
 } from '@mui/material';
 import {
   Add,
@@ -197,92 +199,92 @@ const StockManagement: React.FC = () => {
           Stock Management
         </Typography>
 
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, mb: 2, position: 'sticky', top: 0, zIndex: 1000, backgroundColor: 'white' }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={4}>
               <TextField
-                fullWidth
                 label="Search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <FormControlLabel
+                        control={<Checkbox checked={showZero} onChange={(e) => setShowZero(e.target.checked)} />}
+                        label="Zero Stock"
+                        labelPlacement="start"
+                        sx={{ mr: 0 }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={<Checkbox checked={showZero} onChange={(e) => setShowZero(e.target.checked)} />}
-                label="Show Zero Stock"
-              />
+            <Grid item xs={12} md={8}>
+              <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ flexWrap: 'nowrap' }}>
+                <Button variant="contained" startIcon={<Add />} onClick={handleManualEntry} sx={{ minWidth: '120px' }}>
+                  Manual Entry
+                </Button>
+                <Button variant="contained" startIcon={<GetApp />} onClick={handleDownloadTemplate} sx={{ minWidth: '120px' }}>
+                  Download Template
+                </Button>
+                <Button variant="contained" startIcon={<Publish />} onClick={handleImportClick} sx={{ minWidth: '120px' }}>
+                  Import
+                </Button>
+                <Button variant="contained" startIcon={<GetApp />} onClick={handleExport} sx={{ minWidth: '120px' }}>
+                  Export
+                </Button>
+                <Button variant="contained" startIcon={<Print />} onClick={handlePrint} sx={{ minWidth: '120px' }}>
+                  Print Stock
+                </Button>
+              </Stack>
             </Grid>
           </Grid>
         </Paper>
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Product Name</TableCell>
-                <TableCell>Quantity</TableCell>
-                <TableCell>Unit Price</TableCell>
-                <TableCell>Total Value</TableCell>
-                <TableCell>Reorder Level</TableCell>
-                <TableCell>Last Updated</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {stockData?.map((stock: any) => (
-                <TableRow key={stock.id} sx={{ backgroundColor: stock.quantity <= stock.reorder_level ? 'yellow.main' : 'inherit' }}>
-                  <TableCell>{stock.product_name}</TableCell>
-                  <TableCell>{stock.quantity} {stock.unit}</TableCell>
-                  <TableCell>{stock.unit_price}</TableCell>
-                  <TableCell>{stock.total_value}</TableCell>
-                  <TableCell>{stock.reorder_level}</TableCell>
-                  <TableCell>{stock.last_updated}</TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => alert(`Details: ${stock.description}`)}>
-                      <Visibility />
-                    </IconButton>
-                    <IconButton onClick={() => handleEditStock(stock)}>
-                      <Edit />
-                    </IconButton>
-                  </TableCell>
+        <Box sx={{ 
+          overflowY: 'auto', 
+          maxHeight: 'calc(100vh - 200px)', /* Adjust based on header heights */
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Product Name</TableCell>
+                  <TableCell>Quantity</TableCell>
+                  <TableCell>Unit Price</TableCell>
+                  <TableCell>Total Value</TableCell>
+                  <TableCell>Reorder Level</TableCell>
+                  <TableCell>Last Updated</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {stockData?.map((stock: any) => (
+                  <TableRow key={stock.id} sx={{ backgroundColor: stock.quantity <= stock.reorder_level ? 'yellow.main' : 'inherit' }}>
+                    <TableCell>{stock.product_name}</TableCell>
+                    <TableCell>{stock.quantity} {stock.unit}</TableCell>
+                    <TableCell>{stock.unit_price}</TableCell>
+                    <TableCell>{stock.total_value}</TableCell>
+                    <TableCell>{stock.reorder_level}</TableCell>
+                    <TableCell>{stock.last_updated}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => alert(`Details: ${stock.description}`)}>
+                        <Visibility />
+                      </IconButton>
+                      <IconButton onClick={() => handleEditStock(stock)}>
+                        <Edit />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       </Container>
-
-      {/* Floating button bar at bottom */}
-      <Box sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        bgcolor: 'background.paper',
-        boxShadow: 3,
-        p: 2,
-        display: 'flex',
-        justifyContent: 'center',
-        gap: 2,
-        zIndex: 1000
-      }}>
-        <Button variant="contained" startIcon={<Add />} onClick={handleManualEntry}>
-          Manual Entry
-        </Button>
-        <Button variant="contained" startIcon={<GetApp />} onClick={handleDownloadTemplate}>
-          Download Template
-        </Button>
-        <Button variant="contained" startIcon={<Publish />} onClick={handleImportClick}>
-          Import
-        </Button>
-        <Button variant="contained" startIcon={<GetApp />} onClick={handleExport}>
-          Export
-        </Button>
-        <Button variant="contained" startIcon={<Print />} onClick={handlePrint}>
-          Print Stock
-        </Button>
-      </Box>
 
       {/* Edit Stock Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>

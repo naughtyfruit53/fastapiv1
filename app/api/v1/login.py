@@ -22,6 +22,8 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+logger.info("Login router initialized")
+
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(
@@ -30,6 +32,8 @@ async def login_for_access_token(
     db: Session = Depends(get_db)
 ):
     """Enhanced login with comprehensive organization isolation, audit logging, and account lockout protection"""
+    
+    logger.info(f"Login attempt via form data for username: {form_data.username}")
     
     # Extract organization information from request headers
     organization_context = get_organization_from_request(request)
@@ -202,6 +206,8 @@ async def login_with_email(
 ):
     """Enhanced email-based login with organization isolation and audit logging"""
     
+    logger.info(f"Login attempt via email for: {user_login.email}")
+    
     # Extract organization information from request headers
     organization_context = get_organization_from_request(request)
     organization_id = organization_context.organization_id if organization_context else None
@@ -357,3 +363,5 @@ async def login_with_email(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during email login"
         )
+
+logger.info("Login endpoints defined: /login and /login/email")
