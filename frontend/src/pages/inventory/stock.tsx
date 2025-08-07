@@ -39,8 +39,6 @@ import {
 } from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 
 // Type declaration for jsPDF autoTable extension
 declare module 'jspdf' {
@@ -104,7 +102,7 @@ const StockManagement: React.FC = () => {
   };
 
   const handleDownloadTemplate = () => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/stock/template/excel`, '_blank');
+    masterDataService.downloadStockTemplate();
   };
 
   const handleImportClick = () => {
@@ -130,15 +128,11 @@ const StockManagement: React.FC = () => {
   };
 
   const handleExport = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Stock');
-    worksheet.addRow(['Product Name', 'Quantity', 'Unit Price', 'Total Value', 'Reorder Level', 'Last Updated']);
-    stockData.forEach((stock: any) => {
-      worksheet.addRow([stock.product_name, stock.quantity, stock.unit_price, stock.total_value, stock.reorder_level, stock.last_updated]);
-    });
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, 'stock_export.xlsx');
+    try {
+      await masterDataService.exportStock({ search: searchText, show_zero: showZero });
+    } catch (error) {
+      alert('Failed to export stock data. Please try again.');
+    }
   };
 
   const handlePrint = () => {
