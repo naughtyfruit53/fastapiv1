@@ -244,7 +244,7 @@ async def import_vendors_excel(
             detail="Only Excel files (.xlsx, .xls) are allowed"
         )
     try:
-        records = await ExcelService.parse_excel_file(file, VendorExcelService.REQUIRED_COLUMNS)
+        records = await ExcelService.parse_excel_file(file, VendorExcelService.REQUIRED_COLUMNS, "Vendor Import Template")
         if not records:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

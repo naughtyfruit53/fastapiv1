@@ -259,7 +259,7 @@ async def import_customers_excel(
     
     try:
         # Parse Excel file
-        records = await ExcelService.parse_excel_file(file, CustomerExcelService.REQUIRED_COLUMNS)
+        records = await ExcelService.parse_excel_file(file, CustomerExcelService.REQUIRED_COLUMNS, "Customer Import Template")
         
         if not records:
             raise HTTPException(
@@ -273,19 +273,19 @@ async def import_customers_excel(
         
         for i, record in enumerate(records, 1):
             try:
-                # Map Excel columns to model fields
+                # Map Excel columns to model fields (using normalized column names)
                 customer_data = {
-                    "name": record.get("Name", "").strip(),
-                    "contact_number": record.get("Contact Number", "").strip(),
-                    "email": record.get("Email", "").strip() or None,
-                    "address1": record.get("Address Line 1", "").strip(),
-                    "address2": record.get("Address Line 2", "").strip() or None,
-                    "city": record.get("City", "").strip(),
-                    "state": record.get("State", "").strip(),
-                    "pin_code": record.get("Pin Code", "").strip(),
-                    "state_code": record.get("State Code", "").strip(),
-                    "gst_number": record.get("GST Number", "").strip() or None,
-                    "pan_number": record.get("PAN Number", "").strip() or None,
+                    "name": str(record.get("name", "")).strip(),
+                    "contact_number": str(record.get("contact_number", "")).strip(),
+                    "email": str(record.get("email", "")).strip() or None,
+                    "address1": str(record.get("address_line_1", "")).strip(),
+                    "address2": str(record.get("address_line_2", "")).strip() or None,
+                    "city": str(record.get("city", "")).strip(),
+                    "state": str(record.get("state", "")).strip(),
+                    "pin_code": str(record.get("pin_code", "")).strip(),
+                    "state_code": str(record.get("state_code", "")).strip(),
+                    "gst_number": str(record.get("gst_number", "")).strip() or None,
+                    "pan_number": str(record.get("pan_number", "")).strip() or None,
                 }
                 
                 # Validate required fields

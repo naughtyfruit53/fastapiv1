@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ExcelService:
     @staticmethod
-    async def parse_excel_file(file, required_columns: List[str]) -> List[Dict]:
+    async def parse_excel_file(file, required_columns: List[str], sheet_name: str = None) -> List[Dict]:
         """
         Parse Excel file and return list of dictionaries.
         Supports both .xlsx and .xls formats.
@@ -22,8 +22,38 @@ class ExcelService:
             content = await file.read()
             excel_buffer = io.BytesIO(content)
             
+            # Try to determine the appropriate data sheet name if not provided
+            if sheet_name is None:
+                # Try to read all sheet names and find the data sheet
+                try:
+                    xl_file = pd.ExcelFile(excel_buffer)
+                    sheet_names = xl_file.sheet_names
+                    
+                    # Look for common data sheet patterns
+                    data_sheet_patterns = [
+                        "Stock Import Template", "Product Import Template", "Vendor Import Template", 
+                        "Customer Import Template", "Import Template", "Data", "Sheet1"
+                    ]
+                    
+                    sheet_name = None
+                    for pattern in data_sheet_patterns:
+                        if pattern in sheet_names:
+                            sheet_name = pattern
+                            break
+                    
+                    # If no pattern match, use the first sheet
+                    if sheet_name is None and sheet_names:
+                        sheet_name = sheet_names[0]
+                        
+                except Exception:
+                    # If we can't read sheet names, try the default approach
+                    sheet_name = 0  # First sheet
+            
+            # Reset buffer position
+            excel_buffer.seek(0)
+            
             # Use pandas to read Excel, specifying the sheet name for data
-            df = pd.read_excel(excel_buffer, sheet_name="Stock Import Template", engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
+            df = pd.read_excel(excel_buffer, sheet_name=sheet_name, engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
             
             # Clean column names
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
@@ -32,7 +62,8 @@ class ExcelService:
             missing_columns = [col for col in required_columns if col.lower().replace(' ', '_') not in df.columns]
             if missing_columns:
                 found_columns = ', '.join(df.columns)
-                raise ValueError(f"Missing required columns in 'Stock Import Template' sheet: {', '.join(missing_columns)}. Found columns: {found_columns}. Make sure to upload a data file with the correct sheet and headers, not the instructions sheet.")
+                sheet_info = f"sheet '{sheet_name}'" if isinstance(sheet_name, str) else f"sheet {sheet_name}"
+                raise ValueError(f"Missing required columns in {sheet_info}: {', '.join(missing_columns)}. Found columns: {found_columns}. Make sure to upload a data file with the correct sheet and headers, not the instructions sheet.")
             
             # Convert to list of dicts, handling NaN values
             records = df.replace({pd.NA: None, float('nan'): None}).to_dict(orient='records')
@@ -45,7 +76,7 @@ class ExcelService:
             raise
         except Exception as e:
             logger.error(f"Error parsing Excel file: {str(e)}")
-            raise ValueError(f"Invalid Excel file format or missing 'Stock Import Template' sheet: {str(e)}. Please use the downloaded template and fill in the data sheet.")
+            raise ValueError(f"Invalid Excel file format or error reading data sheet: {str(e)}. Please use the downloaded template and fill in the data sheet.")
 
     @staticmethod
     def create_streaming_response(excel_data: io.BytesIO, filename: str) -> StreamingResponse:
