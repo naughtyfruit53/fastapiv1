@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session, Query
 from sqlalchemy import and_
 from app.core.database import get_db
 from app.models.base import Organization, User
+from starlette.responses import Response
+from app.core.config import settings as config_settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -185,18 +187,53 @@ class TenantMiddleware:
                 await self.app(scope, receive, send)
                 return
             
+            # Skip tenant extraction for auth endpoints and app-level/super admin endpoints
+            if request.url.path.startswith("/api/auth/"):
+                logger.debug(f"Skipping tenant extraction for auth path: {request.url.path}")
+                await self.app(scope, receive, send)
+                return
+            
+            excluded_paths = [
+                "/api/users/me",
+                "/organizations/app-statistics",
+                "/api/v1/organizations/app-statistics",
+                "/organizations/org-statistics",
+                "/api/v1/organizations/org-statistics",
+                "/organizations/license/create",
+                "/api/v1/organizations/license/create",
+                "/organizations/factory-default",
+                "/api/v1/organizations/factory-default",
+                "/organizations/reset-data",
+                "/api/v1/organizations/reset-data",
+                # Add more as needed
+            ]
+            if request.url.path in excluded_paths:
+                logger.debug(f"Skipping tenant extraction for app-level path: {request.url.path}")
+                await self.app(scope, receive, send)
+                return
+            
             # Extract organization context from various sources for non-OPTIONS requests
             org_id = self._extract_organization_id(request)
             
             if org_id:
                 TenantContext.set_organization_id(org_id)
                 logger.debug(f"Middleware set organization context: {org_id}")
-        
-        # Process request
-        await self.app(scope, receive, send)
+                await self.app(scope, receive, send)
+            else:
+                # Instead of raising exception, return a 404 response with CORS headers
+                origin = request.headers.get("origin")
+                response = Response("Not Found", status_code=404)
+                if origin and (origin in config_settings.BACKEND_CORS_ORIGINS or '*' in config_settings.BACKEND_CORS_ORIGINS):
+                    response.headers["Access-Control-Allow-Origin"] = origin
+                    response.headers["Access-Control-Allow-Credentials"] = "true"
+                    response.headers["Access-Control-Allow-Methods"] = "*"
+                    response.headers["Access-Control-Allow-Headers"] = "*"
+                await response(scope, receive, send)
+                return
         
         # Clear context after request
         TenantContext.clear()
+
     
     def _extract_organization_id(self, request: Request) -> Optional[int]:
         """Extract organization ID from request headers, subdomain, or path"""
