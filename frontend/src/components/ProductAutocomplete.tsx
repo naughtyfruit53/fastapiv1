@@ -14,7 +14,7 @@ import AddProductModal from './AddProductModal';
 
 interface Product {
   id: number;
-  name: string;
+  product_name: string; // Updated to match API response format
   hsn_code?: string;
   part_number?: string;
   unit: string;
@@ -95,7 +95,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   const options = React.useMemo(() => {
     const addOption = {
       id: -1,
-      name: '➕ Add Product',
+      product_name: '➕ Add Product',
       isAddOption: true,
     };
     
@@ -129,9 +129,9 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
         getOptionLabel={(option) => {
-          if (option.isAddOption) return option.name;
-          return `${option.name}${option.part_number ? ` (${option.part_number})` : ''}`;
-        }}
+          if (option.isAddOption) return option.product_name;
+          return `${option.product_name}${option.part_number ? ` (${option.part_number})` : ''}`;
+        }}}
         isOptionEqualToValue={(option, value) => option.id === value?.id}
         loading={isLoading}
         disabled={disabled}
@@ -163,7 +163,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
                 borderBottom: '1px solid #eee'
               }}>
                 <AddIcon sx={{ mr: 1 }} />
-                {option.name}
+                {option.product_name}
               </Box>
             );
           }
@@ -173,7 +173,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
               <Box sx={{ width: '100%' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                    {option.name}
+                    {option.product_name}
                   </Typography>
                   {option.unit_price && (
                     <Chip 
