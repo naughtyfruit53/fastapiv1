@@ -656,3 +656,148 @@ class ProductExcelService(ExcelService):
         
         logger.info(f"Products data exported successfully: {len(products_data)} records")
         return excel_buffer
+
+class CompanyExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "Name",
+        "Address Line 1", 
+        "City",
+        "State",
+        "Pin Code",
+        "State Code",
+        "Contact Number"
+    ]
+
+    @staticmethod
+    def create_template() -> io.BytesIO:
+        """Create Excel template for company import with styling and sample data"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Company Import Template"
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers (including optional fields)
+        headers = [
+            "Name", "Address Line 1", "Address Line 2", "City", "State", 
+            "Pin Code", "State Code", "Contact Number", "Email", 
+            "GST Number", "PAN Number", "Registration Number"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data
+        sample_data = [
+            "Sample Company Ltd",   # Name
+            "123 Business Street",  # Address Line 1
+            "Business Complex",     # Address Line 2
+            "Mumbai",               # City
+            "Maharashtra",          # State
+            "400001",               # Pin Code
+            "27",                   # State Code
+            "1234567890",          # Contact Number
+            "info@company.com",     # Email
+            "27ABCDE1234F1Z5",     # GST Number
+            "ABCDE1234F",          # PAN Number
+            "CIN12345678"          # Registration Number
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Company Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Name, Address Line 1, City, State, Pin Code, State Code, and Contact Number are mandatory.",
+            "3. Address Line 2, Email, GST Number, PAN Number, and Registration Number are optional.",
+            "4. Pin Code and State Code must be valid.",
+            "5. If company name exists, it will be updated; otherwise, created.",
+            "6. Do not modify the header row.",
+            "7. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info("Company Excel template generated successfully")
+        return excel_buffer
+
+    @staticmethod
+    def export_companies(companies_data: List[Dict]) -> io.BytesIO:
+        """Export companies data to Excel with styling"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Companies Export"
+
+        # Define styles (same as template)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = [
+            "Name", "Address Line 1", "Address Line 2", "City", "State",
+            "Pin Code", "State Code", "Contact Number", "Email", 
+            "GST Number", "PAN Number", "Registration Number"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data
+        for row_idx, item in enumerate(companies_data, 2):
+            row_data = [
+                item.get("name"),
+                item.get("address1"),
+                item.get("address2"),
+                item.get("city"),
+                item.get("state"),
+                item.get("pin_code"),
+                item.get("state_code"),
+                item.get("contact_number"),
+                item.get("email"),
+                item.get("gst_number"),
+                item.get("pan_number"),
+                item.get("registration_number")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info(f"Companies data exported successfully: {len(companies_data)} records")
+        return excel_buffer
