@@ -248,7 +248,7 @@ async def import_products_excel(
     
     try:
         # Parse Excel file
-        records = await ExcelService.parse_excel_file(file, ProductExcelService.REQUIRED_COLUMNS)
+        records = await ExcelService.parse_excel_file(file, ProductExcelService.REQUIRED_COLUMNS, "Product Import Template")
         
         if not records:
             raise HTTPException(

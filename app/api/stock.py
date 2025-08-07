@@ -317,7 +317,7 @@ async def bulk_import_stock(
     
     try:
         # Parse Excel file using existing service
-        records = await ExcelService.parse_excel_file(file, StockExcelService.REQUIRED_COLUMNS)
+        records = await ExcelService.parse_excel_file(file, StockExcelService.REQUIRED_COLUMNS, "Stock Import Template")
         
         if not records:
             raise HTTPException(
