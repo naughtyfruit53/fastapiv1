@@ -268,14 +268,14 @@ const SalesVoucherPage: React.FC = () => {
                         <ProductAutocomplete
                           value={watch(`items.${index}.name`)}
                           onChange={(product) => {
-                            setValue(`items.${index}.name`, product?.name || '');
+                            setValue(`items.${index}.name`, product?.product_name || '');
                             if (product) {
                               setValue(`items.${index}.hsn_code`, product.hsn_code || '');
                               setValue(`items.${index}.unit_price`, product.unit_price || 0);
                               setValue(`items.${index}.gst`, product.gst_rate || 0);
                               setValue(`items.${index}.unit`, product.unit || '');
                             }
-                          }}
+                          }}}
                           error={!!errors.items?.[index]?.name}
                           helperText={errors.items?.[index]?.name ? 'Product is required' : ''}
                           disabled={isViewMode}

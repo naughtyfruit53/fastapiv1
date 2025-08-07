@@ -304,7 +304,7 @@ const PurchaseOrderPage: React.FC = () => {
                             }
                           }}
                           onAddNew={() => setAddProductDialogOpen(true)}
-                          getOptionLabel={(option) => option.name}
+                          getOptionLabel={(option) => option.product_name}
                           getOptionValue={(option) => option.id}
                           label="Product"
                           placeholder="Search products..."
@@ -313,7 +313,7 @@ const PurchaseOrderPage: React.FC = () => {
                           helperText={errors.items?.[index]?.name ? 'Required' : ''}
                           required={true}
                           addNewText="Add New Product"
-                          searchFields={['name', 'hsn_code', 'part_number']}
+                          searchFields={['product_name', 'hsn_code', 'part_number']}
                         />
                       </Grid>
                       <Grid item xs={2}>

@@ -18,7 +18,10 @@ export const getVendors = async () => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error('Failed to fetch vendors');
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    throw new Error(`Failed to fetch vendors: ${response.statusText}`);
   }
   return response.json();
 };
@@ -28,7 +31,10 @@ export const getCustomers = async () => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error('Failed to fetch customers');
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    throw new Error(`Failed to fetch customers: ${response.statusText}`);
   }
   return response.json();
 };
@@ -38,7 +44,10 @@ export const getProducts = async () => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error('Failed to fetch products');
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    throw new Error(`Failed to fetch products: ${response.statusText}`);
   }
   return response.json();
 };
@@ -55,7 +64,10 @@ export const searchCustomers = async (searchTerm: string, limit = 10) => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error('Failed to search customers');
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    throw new Error(`Failed to search customers: ${response.statusText}`);
   }
   return response.json();
 };
@@ -71,7 +83,10 @@ export const searchProducts = async (searchTerm: string, limit = 10) => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error('Failed to search products');
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    throw new Error(`Failed to search products: ${response.statusText}`);
   }
   return response.json();
 };
