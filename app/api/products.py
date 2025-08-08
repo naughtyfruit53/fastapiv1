@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/", response_model=List[ProductResponse])
+@router.get("", response_model=List[ProductResponse])
 async def get_products(
     skip: int = 0,
     limit: int = 100,
@@ -65,7 +65,7 @@ async def get_product(
     
     return ProductResponse.from_product(product)
 
-@router.post("/", response_model=ProductResponse)
+@router.post("", response_model=ProductResponse)
 async def create_product(
     product: ProductCreate,
     db: Session = Depends(get_db),

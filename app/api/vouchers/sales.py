@@ -57,6 +57,16 @@ async def get_sales_vouchers(
     vouchers = query.offset(skip).limit(limit).all()
     return vouchers
 
+@router.get("/sales-vouchers/next-number", response_model=str)
+async def get_next_sales_voucher_number(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the next available sales voucher number"""
+    return VoucherNumberService.generate_voucher_number(
+        db, "SV", current_user.organization_id, SalesVoucher
+    )
+
 @router.post("/sales-vouchers/", response_model=SalesVoucherInDB)
 async def create_sales_voucher(
     voucher: SalesVoucherCreate,
@@ -73,10 +83,7 @@ async def create_sales_voucher(
         
         # Generate unique voucher number
         voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db=db,
-            prefix="SV",
-            organization_id=current_user.organization_id,
-            model=SalesVoucher
+            db, "SV", current_user.organization_id, SalesVoucher
         )
         
         db_voucher = SalesVoucher(**voucher_data)
@@ -271,10 +278,7 @@ async def create_sales_order(
         
         # Generate unique voucher number for sales order
         order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db=db,
-            prefix="SO",
-            organization_id=current_user.organization_id,
-            model=SalesOrder
+            db, "SO", current_user.organization_id, SalesOrder
         )
         
         db_order = SalesOrder(**order_data)
@@ -440,10 +444,7 @@ async def create_delivery_challan(
         
         # Generate unique voucher number for delivery challan
         challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db=db,
-            prefix="DC",
-            organization_id=current_user.organization_id,
-            model=DeliveryChallan
+            db, "DC", current_user.organization_id, DeliveryChallan
         )
         
         db_challan = DeliveryChallan(**challan_data)
@@ -590,10 +591,7 @@ async def create_sales_return(
         
         # Generate unique voucher number for sales return
         data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db=db,
-            prefix="SR",
-            organization_id=current_user.organization_id,
-            model=SalesReturn
+            db, "SR", current_user.organization_id, SalesReturn
         )
         
         db_return = SalesReturn(**data)

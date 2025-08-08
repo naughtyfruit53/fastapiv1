@@ -131,7 +131,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         getOptionLabel={(option) => {
           if (option.isAddOption) return option.product_name;
           return `${option.product_name}${option.part_number ? ` (${option.part_number})` : ''}`;
-        }}}
+        }}
         isOptionEqualToValue={(option, value) => option.id === value?.id}
         loading={isLoading}
         disabled={disabled}

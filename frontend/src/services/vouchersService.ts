@@ -13,7 +13,7 @@ export const voucherService = {
     return response.data;
   },
   createVoucher: async (type: string, data: any, sendEmail: boolean = false) => {
-    const response = await api.post(`/vouchers/${type}/`, data, { params: { send_email: sendEmail } });
+    const response = await api.post(`/vouchers/${type}`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updateVoucher: async (type: string, id: number, data: any) => {
@@ -27,7 +27,7 @@ export const voucherService = {
     return response.data;
   },
   createPurchaseVoucher: async (data: any, sendEmail: boolean) => {
-    const response = await api.post(`/vouchers/purchase-vouchers/`, data, { params: { send_email: sendEmail } });
+    const response = await api.post(`/vouchers/purchase-vouchers`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updatePurchaseVoucher: async (id: number, data: any) => {
@@ -41,7 +41,7 @@ export const voucherService = {
     return response.data;
   },
   createPurchaseOrder: async (data: any, sendEmail: boolean) => {
-    const response = await api.post(`/vouchers/purchase_order/`, data, { params: { send_email: sendEmail } });
+    const response = await api.post(`/vouchers/purchase_order`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updatePurchaseOrder: async (id: number, data: any) => {
@@ -55,7 +55,7 @@ export const voucherService = {
     return response.data;
   },
   createGrn: async (data: any, sendEmail: boolean) => {
-    const response = await api.post(`/vouchers/grn/`, data, { params: { send_email: sendEmail } });
+    const response = await api.post(`/vouchers/grn`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updateGrn: async (id: number, data: any) => {
@@ -69,7 +69,7 @@ export const voucherService = {
     return response.data;
   },
   createRejectionIn: async (data: any, sendEmail: boolean) => {
-    const response = await api.post(`/vouchers/rejection_in/`, data, { params: { send_email: sendEmail } });
+    const response = await api.post(`/vouchers/rejection_in`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updateRejectionIn: async (id: number, data: any) => {

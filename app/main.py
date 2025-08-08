@@ -58,6 +58,8 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
+app.router.redirect_slashes = False
+
 # Temporarily disable TenantMiddleware to test if it's causing the 404 (re-enable after testing)
 # app.add_middleware(TenantMiddleware)
 

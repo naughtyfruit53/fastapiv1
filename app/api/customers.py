@@ -1,5 +1,3 @@
-# Revised api.customers.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -15,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/", response_model=List[CustomerInDB])
+@router.get("", response_model=List[CustomerInDB])
 async def get_customers(
     skip: int = 0,
     limit: int = 100,
@@ -69,7 +67,7 @@ async def get_customer(
     
     return customer
 
-@router.post("/", response_model=CustomerInDB)
+@router.post("", response_model=CustomerInDB)
 async def create_customer(
     customer: CustomerCreate,
     db: Session = Depends(get_db),

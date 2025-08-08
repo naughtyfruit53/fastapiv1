@@ -114,7 +114,7 @@ const VoucherManagement: React.FC = () => {
   };
 
   const handleEmailVoucher = async (type: string, id: number) => {
-    const voucherType = type === 'Purchase' ? 'purchase_voucher' : (type === 'Sales' ? 'sales_voucher' : '');
+    const voucherType = type === 'Purchase' ? 'purchase-vouchers' : (type === 'Sales' ? 'sales-vouchers' : '');
     if (!voucherType) return alert('Email not supported for this type');
 
     try {
@@ -129,12 +129,12 @@ const VoucherManagement: React.FC = () => {
   const { data: dashboardStats } = useQuery('dashboardStats', reportsService.getDashboardStats);
   const { data: purchaseVouchers, isLoading: purchaseLoading } = useQuery(
     'purchaseVouchers', 
-    () => voucherService.getVouchers('purchase'),  // Adjusted to match type (getVouchers with type 'purchase')
+    () => voucherService.getVouchers('purchase-vouchers'),  // Adjusted to match type (getVouchers with type 'purchase-vouchers')
     { enabled: tabValue === 0 }
   );
   const { data: salesVouchers, isLoading: salesLoading } = useQuery(
     'salesVouchers', 
-    () => voucherService.getVouchers('sales'),  // Adjusted to match type (getVouchers with type 'sales')
+    () => voucherService.getVouchers('sales-vouchers'),  // Adjusted to match type (getVouchers with type 'sales-vouchers')
     { enabled: tabValue === 1 }
   );
 
