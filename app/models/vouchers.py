@@ -253,6 +253,7 @@ class SalesVoucherItem(VoucherItemBase):
     
     sales_voucher_id = Column(Integer, ForeignKey("sales_vouchers.id"), nullable=False)
     delivery_challan_item_id = Column(Integer, ForeignKey("delivery_challan_items.id"))  # Link to challan item
+    hsn_code = Column(String)
     
     sales_voucher = relationship("SalesVoucher", back_populates="items")
     challan_item = relationship("DeliveryChallanItem")

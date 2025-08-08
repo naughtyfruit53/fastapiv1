@@ -99,7 +99,7 @@ class PurchaseVoucherInDB(VoucherInDBBase):
 
 # Sales Voucher
 class SalesVoucherItemCreate(VoucherItemWithTax):
-    pass
+    hsn_code: Optional[str] = None
 
 class SalesVoucherItemInDB(SalesVoucherItemCreate):
     id: int

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -14,7 +14,9 @@ from app.schemas.vouchers import (
     SalesReturnCreate, SalesReturnInDB, SalesReturnUpdate
 )
 from app.services.email_service import send_voucher_email
+from app.services.voucher_service import VoucherNumberService
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -67,6 +69,15 @@ async def create_sales_voucher(
     try:
         voucher_data = voucher.dict(exclude={'items'})
         voucher_data['created_by'] = current_user.id
+        voucher_data['organization_id'] = current_user.organization_id
+        
+        # Generate unique voucher number
+        voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            db=db,
+            prefix="SV",
+            organization_id=current_user.organization_id,
+            model=SalesVoucher
+        )
         
         db_voucher = SalesVoucher(**voucher_data)
         db.add(db_voucher)
@@ -92,7 +103,7 @@ async def create_sales_voucher(
                 recipient_name=db_voucher.customer.name
             )
         
-        logger.info(f"Sales voucher {voucher.voucher_number} created by {current_user.email}")
+        logger.info(f"Sales voucher {db_voucher.voucher_number} created by {current_user.email}")
         return db_voucher
         
     except Exception as e:
@@ -199,6 +210,33 @@ async def delete_sales_voucher(
             detail="Failed to delete sales voucher"
         )
 
+# New endpoint for sending email separately
+@router.post("/sales-vouchers/{voucher_id}/send-email")
+async def send_sales_voucher_email(
+    voucher_id: int,
+    background_tasks: BackgroundTasks,
+    custom_email: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    voucher = db.query(SalesVoucher).filter(SalesVoucher.id == voucher_id).first()
+    if not voucher:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sales voucher not found")
+    
+    recipient_email = custom_email or (voucher.customer.email if voucher.customer else None)
+    if not recipient_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No email address available")
+    
+    background_tasks.add_task(
+        send_voucher_email,
+        voucher_type="sales_voucher",
+        voucher_id=voucher.id,
+        recipient_email=recipient_email,
+        recipient_name=voucher.customer.name if voucher.customer else "Customer"
+    )
+    
+    return {"message": "Email sending scheduled"}
+
 # Sales Orders
 @router.get("/sales-orders/", response_model=List[SalesOrderInDB])
 async def get_sales_orders(
@@ -229,6 +267,15 @@ async def create_sales_order(
     try:
         order_data = order.dict(exclude={'items'})
         order_data['created_by'] = current_user.id
+        order_data['organization_id'] = current_user.organization_id
+        
+        # Generate unique voucher number for sales order
+        order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            db=db,
+            prefix="SO",
+            organization_id=current_user.organization_id,
+            model=SalesOrder
+        )
         
         db_order = SalesOrder(**order_data)
         db.add(db_order)
@@ -254,7 +301,7 @@ async def create_sales_order(
                 recipient_name=db_order.customer.name
             )
         
-        logger.info(f"Sales order {order.voucher_number} created by {current_user.email}")
+        logger.info(f"Sales order {db_order.voucher_number} created by {current_user.email}")
         return db_order
         
     except Exception as e:
@@ -389,6 +436,15 @@ async def create_delivery_challan(
     try:
         challan_data = challan.dict(exclude={'items'})
         challan_data['created_by'] = current_user.id
+        challan_data['organization_id'] = current_user.organization_id
+        
+        # Generate unique voucher number for delivery challan
+        challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            db=db,
+            prefix="DC",
+            organization_id=current_user.organization_id,
+            model=DeliveryChallan
+        )
         
         db_challan = DeliveryChallan(**challan_data)
         db.add(db_challan)
@@ -414,7 +470,7 @@ async def create_delivery_challan(
                 recipient_name=db_challan.customer.name
             )
         
-        logger.info(f"Delivery Challan {challan.voucher_number} created by {current_user.email}")
+        logger.info(f"Delivery Challan {db_challan.voucher_number} created by {current_user.email}")
         return db_challan
         
     except Exception as e:
@@ -530,6 +586,15 @@ async def create_sales_return(
     try:
         data = return_data.dict(exclude={'items'})
         data['created_by'] = current_user.id
+        data['organization_id'] = current_user.organization_id
+        
+        # Generate unique voucher number for sales return
+        data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            db=db,
+            prefix="SR",
+            organization_id=current_user.organization_id,
+            model=SalesReturn
+        )
         
         db_return = SalesReturn(**data)
         db.add(db_return)
@@ -555,7 +620,7 @@ async def create_sales_return(
                 recipient_name=db_return.customer.name
             )
         
-        logger.info(f"Sales return {return_data.voucher_number} created by {current_user.email}")
+        logger.info(f"Sales return {db_return.voucher_number} created by {current_user.email}")
         return db_return
         
     except Exception as e:

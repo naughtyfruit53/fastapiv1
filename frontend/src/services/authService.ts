@@ -77,7 +77,7 @@ export const voucherService = {
   // Generic function for CRUD
   getVouchers: async (type: string, params?: any) => {
     try {
-      const response = await api.get(`/v1/vouchers/${type}`, { params });
+      const response = await api.get(`/v1/vouchers/${type}/`, { params });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to fetch ${type}`);
@@ -85,7 +85,7 @@ export const voucherService = {
   },
   createVoucher: async (type: string, data: any, sendEmail = false) => {
     try {
-      const response = await api.post(`/v1/vouchers/${type}?send_email=${sendEmail}`, data);
+      const response = await api.post(`/v1/vouchers/${type}/`, data, { params: { send_email: sendEmail } });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to create ${type}`);
@@ -116,9 +116,12 @@ export const voucherService = {
     }
   },
   sendVoucherEmail: async (voucherType: string, voucherId: number, customEmail?: string) => {
-    const params = customEmail ? `?custom_email=${customEmail}` : '';
+    let params = '';
+    if (customEmail) {
+      params = `?custom_email=${customEmail}`;
+    }
     try {
-      const response = await api.post(`/v1/vouchers/send-email/${voucherType}/${voucherId}${params}`);
+      const response = await api.post(`/v1/${voucherType}/${voucherId}/send-email${params}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to send email');

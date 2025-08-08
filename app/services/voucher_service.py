@@ -23,21 +23,23 @@ class VoucherNumberService:
         """
         Generate a unique voucher number for the organization
         
-        Format: {PREFIX}-{YEAR}-{ORG_ID}-{SEQUENCE}
-        Example: PO-2025-1-001
+        Format: {PREFIX}/{FISCAL_YEAR}/{SEQUENCE}
+        Example: SV/2526/00000001
         """
         current_year = datetime.now().year
+        current_month = datetime.now().month
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
         
-        # Get the latest voucher number for this prefix, year, and organization
+        # Get the latest voucher number for this prefix, fiscal year, and organization
         latest_voucher = db.query(model).filter(
             model.organization_id == organization_id,
-            model.voucher_number.like(f"{prefix}-{current_year}-{organization_id}-%")
+            model.voucher_number.like(f"{prefix}/{fiscal_year}/%")
         ).order_by(model.voucher_number.desc()).first()
         
         if latest_voucher:
             # Extract sequence number from the last voucher
             try:
-                last_sequence = int(latest_voucher.voucher_number.split('-')[-1])
+                last_sequence = int(latest_voucher.voucher_number.split('/')[-1])
                 next_sequence = last_sequence + 1
             except (ValueError, IndexError):
                 next_sequence = 1
@@ -45,12 +47,12 @@ class VoucherNumberService:
             next_sequence = 1
         
         # Generate new voucher number
-        voucher_number = f"{prefix}-{current_year}-{organization_id}-{next_sequence:03d}"
+        voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:08d}"
         
         # Ensure uniqueness (in case of race conditions)
         while db.query(model).filter(model.voucher_number == voucher_number).first():
             next_sequence += 1
-            voucher_number = f"{prefix}-{current_year}-{organization_id}-{next_sequence:03d}"
+            voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:08d}"
         
         return voucher_number
 
