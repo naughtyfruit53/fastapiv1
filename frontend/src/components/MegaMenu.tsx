@@ -138,12 +138,20 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       icon: <Receipt />,
       sections: [
         {
-          title: 'Purchase Vouchers',
+          title: 'Purchase Voucher',
           items: [
             { name: 'Purchase Order', path: '/vouchers/Purchase-Vouchers/purchase-order', icon: <LocalShipping /> },
             { name: 'GRN (Goods Received Note)', path: '/vouchers/Purchase-Vouchers/grn', icon: <Inventory /> },
             { name: 'Purchase Voucher', path: '/vouchers/Purchase-Vouchers/purchase-voucher', icon: <ShoppingCart /> },
             { name: 'Rejection In', path: '/vouchers/Purchase-Vouchers/rejection-in', icon: <SwapHoriz /> }
+          ]
+        },
+        {
+          title: 'Pre Sales Vouchers',
+          items: [
+            { name: 'Quotation', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+            { name: 'Proforma Invoice', path: '/vouchers/Pre-Sales-Voucher/proforma-invoice', icon: <ReceiptLong /> },
+            { name: 'Sales Order', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Assessment /> }
           ]
         },
         {
@@ -156,11 +164,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           ]
         },
         {
-          title: 'Pre Sales Vouchers',
+          title: 'Manufacturing Voucher',
           items: [
-            { name: 'Quotation', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
-            { name: 'Proforma Invoice', path: '/vouchers/Pre-Sales-Voucher/proforma-invoice', icon: <ReceiptLong /> },
-            { name: 'Sales Order', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Assessment /> }
+            { name: 'Production', path: '/vouchers/manufacturing/production', icon: <Build /> },
+            { name: 'Jobwork In', path: '/vouchers/manufacturing/jobwork-in', icon: <Build /> },
+            { name: 'Jobwork Out', path: '/vouchers/manufacturing/jobwork-out', icon: <Build /> }
           ]
         },
         {
@@ -175,7 +183,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           ]
         },
         {
-          title: 'Internal Vouchers',
+          title: 'Intern Department Vouchers',
           items: [
             { name: 'Inter Department Voucher', path: '/vouchers/inter-department-voucher', icon: <SwapHoriz /> }
           ]

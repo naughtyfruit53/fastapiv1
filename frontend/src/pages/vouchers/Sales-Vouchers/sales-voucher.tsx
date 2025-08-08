@@ -101,6 +101,10 @@ const SalesVoucherPage: React.FC = () => {
     notes: '',
     items: [{ product_id: null, hsn_code: '', quantity: 0, unit: '', unit_price: 0, discount_percentage: 0, discount_amount: 0, taxable_amount: 0, gst_rate: 0, cgst_amount: 0, sgst_amount: 0, igst_amount: 0, total_amount: 0 }],
     total_amount: 0,
+    discount_amount: 0,
+    cgst_amount: 0,
+    sgst_amount: 0,
+    igst_amount: 0,
   };
 
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
