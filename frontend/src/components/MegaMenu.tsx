@@ -174,12 +174,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Financial Vouchers',
           items: [
-            { name: 'Payment Voucher', path: '/vouchers/payment-voucher', icon: <AccountBalance /> },
-            { name: 'Receipt Voucher', path: '/vouchers/receipt-voucher', icon: <AccountBalance /> },
-            { name: 'Journal Voucher', path: '/vouchers/journal-voucher', icon: <AccountBalance /> },
-            { name: 'Contra Voucher', path: '/vouchers/contra-voucher', icon: <AccountBalance /> },
-            { name: 'Credit Note', path: '/vouchers/credit-note', icon: <AccountBalance /> },
-            { name: 'Debit Note', path: '/vouchers/debit-note', icon: <AccountBalance /> }
+            { name: 'Payment Voucher', path: '/vouchers/financial/payment-voucher', icon: <AccountBalance /> },
+            { name: 'Receipt Voucher', path: '/vouchers/financial/receipt-voucher', icon: <AccountBalance /> },
+            { name: 'Journal Voucher', path: '/vouchers/financial/journal-voucher', icon: <AccountBalance /> },
+            { name: 'Contra Voucher', path: '/vouchers/financial/contra-voucher', icon: <AccountBalance /> },
+            { name: 'Credit Note', path: '/vouchers/financial/credit-note', icon: <AccountBalance /> },
+            { name: 'Debit Note', path: '/vouchers/financial/debit-note', icon: <AccountBalance /> }
           ]
         },
         {
