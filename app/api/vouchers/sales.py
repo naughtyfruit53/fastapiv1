@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -31,12 +31,15 @@ async def get_sales_vouchers_by_type(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get sales vouchers filtered by type (problem statement requirement)"""
-    query = db.query(SalesVoucher).filter(SalesVoucher.voucher_type == "sales")
+    query = db.query(SalesVoucher).options(joinedload(SalesVoucher.customer)).filter(
+        SalesVoucher.voucher_type == "sales",
+        SalesVoucher.organization_id == current_user.organization_id
+    )
     
     if status:
         query = query.filter(SalesVoucher.status == status)
     
-    vouchers = query.offset(skip).limit(limit).all()
+    vouchers = query.order_by(SalesVoucher.id.desc()).offset(skip).limit(limit).all()
     return vouchers
 
 # Sales Vouchers
@@ -49,12 +52,14 @@ async def get_sales_vouchers(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all sales vouchers"""
-    query = db.query(SalesVoucher)
+    query = db.query(SalesVoucher).options(joinedload(SalesVoucher.customer)).filter(
+        SalesVoucher.organization_id == current_user.organization_id
+    )
     
     if status:
         query = query.filter(SalesVoucher.status == status)
     
-    vouchers = query.offset(skip).limit(limit).all()
+    vouchers = query.order_by(SalesVoucher.id.desc()).offset(skip).limit(limit).all()
     return vouchers
 
 @router.get("/sales-vouchers/next-number", response_model=str)
@@ -81,10 +86,21 @@ async def create_sales_voucher(
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number
-        voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db, "SV", current_user.organization_id, SalesVoucher
-        )
+        # Generate unique voucher number if not provided or blank
+        if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
+            voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "SV", current_user.organization_id, SalesVoucher
+            )
+        else:
+            # Use provided, but check if exists
+            existing = db.query(SalesVoucher).filter(
+                SalesVoucher.organization_id == current_user.organization_id,
+                SalesVoucher.voucher_number == voucher_data['voucher_number']
+            ).first()
+            if existing:
+                voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "SV", current_user.organization_id, SalesVoucher
+                )
         
         db_voucher = SalesVoucher(**voucher_data)
         db.add(db_voucher)
@@ -128,7 +144,10 @@ async def get_sales_voucher(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get sales voucher by ID"""
-    voucher = db.query(SalesVoucher).filter(SalesVoucher.id == voucher_id).first()
+    voucher = db.query(SalesVoucher).options(joinedload(SalesVoucher.customer)).filter(
+        SalesVoucher.id == voucher_id,
+        SalesVoucher.organization_id == current_user.organization_id
+    ).first()
     if not voucher:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -145,7 +164,10 @@ async def update_sales_voucher(
 ):
     """Update sales voucher"""
     try:
-        voucher = db.query(SalesVoucher).filter(SalesVoucher.id == voucher_id).first()
+        voucher = db.query(SalesVoucher).filter(
+            SalesVoucher.id == voucher_id,
+            SalesVoucher.organization_id == current_user.organization_id
+        ).first()
         if not voucher:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -191,7 +213,10 @@ async def delete_sales_voucher(
 ):
     """Delete sales voucher"""
     try:
-        voucher = db.query(SalesVoucher).filter(SalesVoucher.id == voucher_id).first()
+        voucher = db.query(SalesVoucher).filter(
+            SalesVoucher.id == voucher_id,
+            SalesVoucher.organization_id == current_user.organization_id
+        ).first()
         if not voucher:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -226,7 +251,10 @@ async def send_sales_voucher_email(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    voucher = db.query(SalesVoucher).filter(SalesVoucher.id == voucher_id).first()
+    voucher = db.query(SalesVoucher).filter(
+        SalesVoucher.id == voucher_id,
+        SalesVoucher.organization_id == current_user.organization_id
+    ).first()
     if not voucher:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sales voucher not found")
     
@@ -254,12 +282,14 @@ async def get_sales_orders(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all sales orders"""
-    query = db.query(SalesOrder)
+    query = db.query(SalesOrder).options(joinedload(SalesOrder.customer)).filter(
+        SalesOrder.organization_id == current_user.organization_id
+    )
     
     if status:
         query = query.filter(SalesOrder.status == status)
     
-    orders = query.offset(skip).limit(limit).all()
+    orders = query.order_by(SalesOrder.id.desc()).offset(skip).limit(limit).all()
     return orders
 
 @router.post("/sales-orders/", response_model=SalesOrderInDB)
@@ -276,10 +306,20 @@ async def create_sales_order(
         order_data['created_by'] = current_user.id
         order_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number for sales order
-        order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db, "SO", current_user.organization_id, SalesOrder
-        )
+        # Generate unique voucher number if not provided or blank
+        if not order_data.get('voucher_number') or order_data['voucher_number'] == '':
+            order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "SO", current_user.organization_id, SalesOrder
+            )
+        else:
+            existing = db.query(SalesOrder).filter(
+                SalesOrder.organization_id == current_user.organization_id,
+                SalesOrder.voucher_number == order_data['voucher_number']
+            ).first()
+            if existing:
+                order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "SO", current_user.organization_id, SalesOrder
+                )
         
         db_order = SalesOrder(**order_data)
         db.add(db_order)
@@ -323,7 +363,10 @@ async def get_sales_order(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get sales order by ID"""
-    order = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+    order = db.query(SalesOrder).options(joinedload(SalesOrder.customer)).filter(
+        SalesOrder.id == order_id,
+        SalesOrder.organization_id == current_user.organization_id
+    ).first()
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -340,7 +383,10 @@ async def update_sales_order(
 ):
     """Update sales order"""
     try:
-        order = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+        order = db.query(SalesOrder).filter(
+            SalesOrder.id == order_id,
+            SalesOrder.organization_id == current_user.organization_id
+        ).first()
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -386,7 +432,10 @@ async def delete_sales_order(
 ):
     """Delete sales order"""
     try:
-        order = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+        order = db.query(SalesOrder).filter(
+            SalesOrder.id == order_id,
+            SalesOrder.organization_id == current_user.organization_id
+        ).first()
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -421,12 +470,14 @@ async def get_delivery_challans(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = db.query(DeliveryChallan)
+    query = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
+        DeliveryChallan.organization_id == current_user.organization_id
+    )
     
     if status:
         query = query.filter(DeliveryChallan.status == status)
     
-    items = query.offset(skip).limit(limit).all()
+    items = query.order_by(DeliveryChallan.id.desc()).offset(skip).limit(limit).all()
     return items
 
 @router.post("/delivery-challan/", response_model=DeliveryChallanInDB)
@@ -442,10 +493,20 @@ async def create_delivery_challan(
         challan_data['created_by'] = current_user.id
         challan_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number for delivery challan
-        challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db, "DC", current_user.organization_id, DeliveryChallan
-        )
+        # Generate unique voucher number if not provided or blank
+        if not challan_data.get('voucher_number') or challan_data['voucher_number'] == '':
+            challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "DC", current_user.organization_id, DeliveryChallan
+            )
+        else:
+            existing = db.query(DeliveryChallan).filter(
+                DeliveryChallan.organization_id == current_user.organization_id,
+                DeliveryChallan.voucher_number == challan_data['voucher_number']
+            ).first()
+            if existing:
+                challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "DC", current_user.organization_id, DeliveryChallan
+                )
         
         db_challan = DeliveryChallan(**challan_data)
         db.add(db_challan)
@@ -485,7 +546,10 @@ async def get_delivery_challan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    challan = db.query(DeliveryChallan).filter(DeliveryChallan.id == challan_id).first()
+    challan = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
+        DeliveryChallan.id == challan_id,
+        DeliveryChallan.organization_id == current_user.organization_id
+    ).first()
     if not challan:
         raise HTTPException(status_code=404, detail="Delivery Challan not found")
     return challan
@@ -498,7 +562,10 @@ async def update_delivery_challan(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        challan = db.query(DeliveryChallan).filter(DeliveryChallan.id == challan_id).first()
+        challan = db.query(DeliveryChallan).filter(
+            DeliveryChallan.id == challan_id,
+            DeliveryChallan.organization_id == current_user.organization_id
+        ).first()
         if not challan:
             raise HTTPException(status_code=404, detail="Delivery Challan not found")
         
@@ -537,7 +604,10 @@ async def delete_delivery_challan(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        challan = db.query(DeliveryChallan).filter(DeliveryChallan.id == challan_id).first()
+        challan = db.query(DeliveryChallan).filter(
+            DeliveryChallan.id == challan_id,
+            DeliveryChallan.organization_id == current_user.organization_id
+        ).first()
         if not challan:
             raise HTTPException(status_code=404, detail="Delivery Challan not found")
         
@@ -567,12 +637,14 @@ async def get_sales_returns(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all sales returns"""
-    query = db.query(SalesReturn)
+    query = db.query(SalesReturn).options(joinedload(SalesReturn.customer)).filter(
+        SalesReturn.organization_id == current_user.organization_id
+    )
     
     if status:
         query = query.filter(SalesReturn.status == status)
     
-    returns = query.offset(skip).limit(limit).all()
+    returns = query.order_by(SalesReturn.id.desc()).offset(skip).limit(limit).all()
     return returns
 
 @router.post("/sales-returns/", response_model=SalesReturnInDB)
@@ -589,10 +661,20 @@ async def create_sales_return(
         data['created_by'] = current_user.id
         data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number for sales return
-        data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-            db, "SR", current_user.organization_id, SalesReturn
-        )
+        # Generate unique voucher number if not provided or blank
+        if not data.get('voucher_number') or data['voucher_number'] == '':
+            data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "SR", current_user.organization_id, SalesReturn
+            )
+        else:
+            existing = db.query(SalesReturn).filter(
+                SalesReturn.organization_id == current_user.organization_id,
+                SalesReturn.voucher_number == data['voucher_number']
+            ).first()
+            if existing:
+                data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "SR", current_user.organization_id, SalesReturn
+                )
         
         db_return = SalesReturn(**data)
         db.add(db_return)
@@ -636,7 +718,10 @@ async def get_sales_return(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get sales return by ID"""
-    return_ = db.query(SalesReturn).filter(SalesReturn.id == return_id).first()
+    return_ = db.query(SalesReturn).options(joinedload(SalesReturn.customer)).filter(
+        SalesReturn.id == return_id,
+        SalesReturn.organization_id == current_user.organization_id
+    ).first()
     if not return_:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -653,7 +738,10 @@ async def update_sales_return(
 ):
     """Update sales return"""
     try:
-        return_ = db.query(SalesReturn).filter(SalesReturn.id == return_id).first()
+        return_ = db.query(SalesReturn).filter(
+            SalesReturn.id == return_id,
+            SalesReturn.organization_id == current_user.organization_id
+        ).first()
         if not return_:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -696,7 +784,10 @@ async def delete_sales_return(
 ):
     """Delete sales return"""
     try:
-        return_ = db.query(SalesReturn).filter(SalesReturn.id == return_id).first()
+        return_ = db.query(SalesReturn).filter(
+            SalesReturn.id == return_id,
+            SalesReturn.organization_id == current_user.organization_id
+        ).first()
         if not return_:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

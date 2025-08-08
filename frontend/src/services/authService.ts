@@ -77,7 +77,7 @@ export const voucherService = {
   // Generic function for CRUD
   getVouchers: async (type: string, params?: any) => {
     try {
-      const response = await api.get(`/v1/vouchers/${type}/`, { params });
+      const response = await api.get(`/v1/${type}/`, { params });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to fetch ${type}`);
@@ -85,7 +85,7 @@ export const voucherService = {
   },
   createVoucher: async (type: string, data: any, sendEmail = false) => {
     try {
-      const response = await api.post(`/v1/vouchers/${type}/`, data, { params: { send_email: sendEmail } });
+      const response = await api.post(`/v1/${type}/`, data, { params: { send_email: sendEmail } });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to create ${type}`);
@@ -93,7 +93,7 @@ export const voucherService = {
   },
   getVoucherById: async (type: string, id: number) => {
     try {
-      const response = await api.get(`/v1/vouchers/${type}/${id}`);
+      const response = await api.get(`/v1/${type}/${id}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to fetch ${type}`);
@@ -101,7 +101,7 @@ export const voucherService = {
   },
   updateVoucher: async (type: string, id: number, data: any) => {
     try {
-      const response = await api.put(`/v1/vouchers/${type}/${id}`, data);
+      const response = await api.put(`/v1/${type}/${id}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to update ${type}`);
@@ -109,7 +109,7 @@ export const voucherService = {
   },
   deleteVoucher: async (type: string, id: number) => {
     try {
-      const response = await api.delete(`/v1/vouchers/${type}/${id}`);
+      const response = await api.delete(`/v1/${type}/${id}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to delete ${type}`);

@@ -188,8 +188,8 @@ app.include_router(products.router, prefix="/api/v1/products", tags=["products"]
 logger.info("Products router included successfully at prefix: /api/v1/products")
 app.include_router(v1_stock.router, prefix="/api/v1/stock", tags=["stock"])  # Updated to use v1 stock module
 logger.info("Stock router included successfully at prefix: /api/v1/stock")
-app.include_router(vouchers_router, prefix="/api/v1/vouchers", tags=["vouchers"])
-logger.info("Vouchers router included successfully at prefix: /api/v1/vouchers")
+app.include_router(vouchers_router, prefix="/api/v1", tags=["vouchers"])
+logger.info("Vouchers router included successfully at prefix: /api/v1")
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 logger.info("Reports router included successfully at prefix: /api/v1/reports")
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])

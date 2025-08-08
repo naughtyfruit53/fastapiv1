@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { voucherService } from '../../../services/authService';
 import { getCustomers, getProducts } from '../../../services/masterService';
 import jsPDF from 'jspdf';
+import api from '../../../lib/api';
 
 const numberToWordsInteger = (num: number): string => {
   if (num === 0) return '';
@@ -92,16 +93,18 @@ const SalesVoucherPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(id ? Number(id) : null);
   const queryClient = useQueryClient();
 
+  const defaultValues = {
+    voucher_number: '',
+    date: new Date().toISOString().slice(0, 10),
+    customer_id: null,
+    payment_terms: '',
+    notes: '',
+    items: [{ product_id: null, hsn_code: '', quantity: 0, unit: '', unit_price: 0, discount_percentage: 0, discount_amount: 0, taxable_amount: 0, gst_rate: 0, cgst_amount: 0, sgst_amount: 0, igst_amount: 0, total_amount: 0 }],
+    total_amount: 0,
+  };
+
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
-    defaultValues: {
-      voucher_number: '',
-      date: new Date().toISOString().slice(0, 10),
-      customer_id: null,
-      payment_terms: '',
-      notes: '',
-      items: [{ product_id: null, hsn_code: '', quantity: 0, unit: '', unit_price: 0, discount_percentage: 0, discount_amount: 0, taxable_amount: 0, gst_rate: 0, cgst_amount: 0, sgst_amount: 0, igst_amount: 0, total_amount: 0 }],
-      total_amount: 0,
-    }
+    defaultValues
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -155,7 +158,14 @@ const SalesVoucherPage: React.FC = () => {
 
   const { data: voucherList, isLoading: isLoadingList } = useQuery(
     ['salesVouchers'],
-    () => voucherService.getVouchers('sales-vouchers')
+    () => voucherService.getVouchers('sales-vouchers'),
+    {
+      onSuccess: (data) => console.log('Voucher list fetched successfully:', data),
+      onError: (error: any) => {
+        console.error('Failed to fetch voucher list:', error);
+        alert('Failed to fetch voucher list: ' + (error.message || 'Unknown error'));
+      }
+    }
   );
 
   const { data: customerList } = useQuery(
@@ -174,21 +184,28 @@ const SalesVoucherPage: React.FC = () => {
     { enabled: !!selectedId }
   );
 
+  const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery(
+    'nextSalesVoucherNumber',
+    () => api.get('/v1/sales-vouchers/next-number').then(res => res.data),
+    { 
+      enabled: mode === 'create',
+      onSuccess: (data) => console.log('Next voucher number fetched successfully:', data),
+      onError: (error: any) => {
+        console.error('Failed to fetch next voucher number:', error);
+        alert('Failed to fetch next voucher number: ' + (error.message || 'Unknown error'));
+      }
+    }
+  );
+
   useEffect(() => {
-    if (voucherData) {
+    if (mode === 'create' && nextVoucherNumber) {
+      setValue('voucher_number', nextVoucherNumber);
+    } else if (voucherData) {
       reset(voucherData);
     } else if (mode === 'create') {
-      reset({
-        voucher_number: '',
-        date: new Date().toISOString().slice(0, 10),
-        customer_id: null,
-        payment_terms: '',
-        notes: '',
-        items: [{ product_id: null, hsn_code: '', quantity: 0, unit: '', unit_price: 0, discount_percentage: 0, discount_amount: 0, taxable_amount: 0, gst_rate: 0, cgst_amount: 0, sgst_amount: 0, igst_amount: 0, total_amount: 0 }],
-        total_amount: 0,
-      });
+      reset(defaultValues);
     }
-  }, [voucherData, mode, reset]);
+  }, [voucherData, mode, reset, nextVoucherNumber]);
 
   const createMutation = useMutation((data: any) => voucherService.createVoucher('sales-vouchers', data), {
     onSuccess: async (newVoucher) => {
@@ -196,6 +213,10 @@ const SalesVoucherPage: React.FC = () => {
       queryClient.invalidateQueries('salesVouchers');
       setMode('create');
       setSelectedId(null);
+      reset(defaultValues);
+      // Immediately refetch and set the next voucher number to avoid blank flash
+      const { data: newNextNumber } = await refetchNextNumber();
+      setValue('voucher_number', newNextNumber);
 
       // New workflow
       const savePdf = window.confirm('Do you want to save as PDF?');
@@ -325,7 +346,7 @@ const SalesVoucherPage: React.FC = () => {
                     <TableRow key={voucher.id}>
                       <TableCell>{voucher.voucher_number}</TableCell>
                       <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{voucher.customer}</TableCell>
+                      <TableCell>{voucher.customer?.name || ''}</TableCell>
                       <TableCell>
                         <IconButton onClick={() => handleView(voucher.id)}>
                           <Visibility />
@@ -343,8 +364,8 @@ const SalesVoucherPage: React.FC = () => {
         </Grid>
         <Grid item xs={12} md={7} lg={7.2}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h4" gutterBottom sx={{ fontSize: 10 }}>
-              {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Sales Voucher
+            <Typography variant="h1" gutterBottom sx={{ fontSize: 35, textAlign: 'center' }}>
+              {mode === 'create' ? 'Create Sales Voucher' : mode === 'edit' ? 'Edit Sales Voucher' : 'View Sales Voucher'}
             </Typography>
             <form onSubmit={handleSubmit(onSubmit)}>
               <Grid container spacing={2}>
